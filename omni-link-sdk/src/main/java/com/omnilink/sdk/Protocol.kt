@@ -53,3 +53,9 @@ data class CallerContext(
     val callingUid: Int,
     val callingPackage: String
 )
+
+@Serializable
+data class OmniEvent(
+    val name: String,
+    val payload: JsonElement
+)

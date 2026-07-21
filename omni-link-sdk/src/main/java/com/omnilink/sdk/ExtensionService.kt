@@ -22,6 +22,15 @@ abstract class ExtensionService : Service() {
 
     abstract suspend fun onAction(caller: CallerContext, request: ActionRequest): ActionOutcome
 
+    // Override these to support events in v2+ extensions
+    protected open fun onRegisterEventListener(callback: IOmniEventCallback): Boolean {
+        return false
+    }
+
+    protected open fun onUnregisterEventListener(callback: IOmniEventCallback) {
+        // No-op by default
+    }
+
     private val binder = object : IExtensionService.Stub() {
         override fun executeAction(protocolVersion: Int, requestJson: String): String {
             val callingUid = Binder.getCallingUid()
@@ -70,6 +79,14 @@ abstract class ExtensionService : Service() {
             }
 
             return Json.encodeToString(outcome)
+        }
+
+        override fun registerEventListener(callback: IOmniEventCallback): Boolean {
+            return onRegisterEventListener(callback)
+        }
+
+        override fun unregisterEventListener(callback: IOmniEventCallback) {
+            onUnregisterEventListener(callback)
         }
     }
 
