@@ -21,3 +21,6 @@ The protocol handles operations requiring explicit user confirmation in a strict
 
 - **Primary mechanism (Client-side):** The caller (Workspace) checks `CapabilityDescriptor.requiresConfirmation` from the extension's *cached manifest* **before** making the call. If true, the caller is responsible for displaying the confirmation UI and only executing the action if the user approves.
 - **Server-side Fallback (Not a retry protocol):** If a remote extension's `AccessController` returns `AccessDecision.REQUIRES_CONFIRMATION` (e.g., due to a stale cache or dynamic runtime policy), the caller receives `ActionOutcome.Failure(ActionError("requires_confirmation", ...))`. The caller must treat this as a **hard abort** and surface the failure to the agent/user. The caller must **never** silently retry the call assuming implicit confirmation.
+
+## Launcher Interface
+The SDK repo defines the `IOmniLauncherInterface` AIDL as the single source of truth for the launcher IPC contract. However, the Omni-launcher repo does **not** take a direct dependency on this SDK. Instead, it copies the `.aidl` file text directly. The actual implementation (the Service and Binder stub) lives exclusively in the Omni-launcher repo, mapping these calls to Lawnchair/Launcher3 internals.
