@@ -1,5 +1,10 @@
 # OmniLinkSDK
+[![](https://jitpack.io/v/obieda-hussien/OmniLinkSDK.svg)](https://jitpack.io/#obieda-hussien/OmniLinkSDK)
+
 This is now its own GitHub repo, not a folder copied between projects. Every satellite app (and Workspace itself) consumes it via JitPack + a version tag. Fed to the agent first, before any of the other five repos.
+
+## R8 Minification & Shrinking
+This SDK is optimized out-of-the-box. It ships with `consumer-rules.pro` to ensure that consumer apps leveraging R8 shrinking will safely preserve the SDK's AIDL stubs and `@Serializable` JSON models while stripping out unused code, significantly reducing the final APK size of the consumer apps without breaking reflection-based JSON parsing.
 
 ## Consumption instructions
 
