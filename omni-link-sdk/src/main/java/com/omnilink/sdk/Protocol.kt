@@ -16,6 +16,9 @@ sealed interface ActionOutcome {
 
     @Serializable
     data class Failure(val error: ActionError) : ActionOutcome
+
+    @Serializable
+    data class RequiresConfirmation(val message: String) : ActionOutcome
 }
 
 @Serializable

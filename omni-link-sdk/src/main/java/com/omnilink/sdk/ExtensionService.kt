@@ -62,7 +62,7 @@ abstract class ExtensionService : Service() {
             if (decision == AccessDecision.DENY) {
                 ActionOutcome.Failure(ActionError("access_denied", "Access denied by policy"))
             } else if (decision == AccessDecision.REQUIRES_CONFIRMATION) {
-                ActionOutcome.Failure(ActionError("requires_confirmation", "Action requires confirmation"))
+                ActionOutcome.RequiresConfirmation("Action requires confirmation")
             } else {
                 runBlocking(Dispatchers.Default) {
                     onAction(callerContext, request)
@@ -93,7 +93,7 @@ abstract class ExtensionService : Service() {
             if (decision == AccessDecision.DENY) {
                 ActionOutcome.Failure(ActionError("access_denied", "Access denied by policy"))
             } else if (decision == AccessDecision.REQUIRES_CONFIRMATION) {
-                ActionOutcome.Failure(ActionError("requires_confirmation", "Action requires confirmation"))
+                ActionOutcome.RequiresConfirmation("Action requires confirmation")
             } else {
                 onAction(callerContext, request)
             }

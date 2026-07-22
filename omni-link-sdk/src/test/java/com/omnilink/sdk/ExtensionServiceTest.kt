@@ -29,7 +29,7 @@ class ExtensionServiceTest {
 
         override val accessController = object : AccessController {
             override fun decide(caller: CallerContext, request: ActionRequest): AccessDecision {
-                return AccessDecision.ALLOW
+                return if (request.name == "test_confirm") AccessDecision.REQUIRES_CONFIRMATION else AccessDecision.ALLOW
             }
         }
 
@@ -124,6 +124,20 @@ class ExtensionServiceTest {
         assertTrue(outcome is ActionOutcome.Failure)
         val failure = outcome as ActionOutcome.Failure
         assertEquals("version_mismatch", failure.error.code)
+    }
+
+    @Test
+    fun `executeAction returns RequiresConfirmation when access controller dictates`() {
+        val service = Robolectric.buildService(V1Service::class.java).create().bind().get()
+        val binder = service.onBind(Intent()) as IExtensionService
+
+        val request = ActionRequest("test_confirm", buildJsonObject { })
+        val requestJson = Json.encodeToString(request)
+
+        val resultJson = binder.executeAction(1, requestJson)
+        val outcome = Json.decodeFromString<ActionOutcome>(resultJson)
+
+        assertTrue(outcome is ActionOutcome.RequiresConfirmation)
     }
 
     @Test
