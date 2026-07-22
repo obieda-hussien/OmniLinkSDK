@@ -1,3 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <permission
+        android:name="com.omnilink.sdk.permission.BIND_EXTENSION"
+        android:protectionLevel="signature" />
 </manifest>
