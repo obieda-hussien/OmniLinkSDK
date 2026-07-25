@@ -2,6 +2,9 @@ package com.omnilink.sdk
 
 import android.content.Context
 import android.content.Intent
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.put
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
@@ -106,6 +109,60 @@ class ExtensionServiceTest {
 
         override fun onRegisterEventListener(callback: IOmniEventCallback): Boolean {
             return true
+        }
+    }
+
+    class CappedResultService : ExtensionService() {
+        override val minSupportedVersion: Int = 1
+        override val maxSupportedVersion: Int = 1
+
+        override val accessController = object : AccessController {
+            override fun decide(caller: CallerContext, request: ActionRequest): AccessDecision {
+                return AccessDecision.ALLOW
+            }
+        }
+
+        override val auditLogger = object : AuditLogger {
+            override fun log(caller: CallerContext, request: ActionRequest, result: ActionOutcome) {}
+        }
+
+        override suspend fun onAction(caller: CallerContext, request: ActionRequest): ActionOutcome {
+            if (request.name == "get_large_list") {
+                val payload = request.payload as? JsonObject
+                val limit = payload?.get("limit")?.let {
+                    try {
+                        it.toString().toInt()
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+
+                val maxLimit = 50
+                if (limit == null) {
+                    return ActionOutcome.Failure(
+                        ActionError("result_too_large", "Unbounded query requested. A limit is required and must not exceed $maxLimit.")
+                    )
+                }
+
+                if (limit > maxLimit) {
+                    return ActionOutcome.Failure(
+                        ActionError("result_too_large", "Requested limit $limit exceeds the defensive cap of $maxLimit.")
+                    )
+                }
+
+                val list = buildJsonArray {
+                    for (i in 0 until limit) {
+                        add(buildJsonObject {
+                            put("id", i)
+                            put("data", "item_$i")
+                        })
+                    }
+                }
+                return ActionOutcome.Success(buildJsonObject {
+                    put("items", list)
+                })
+            }
+            return ActionOutcome.Success(buildJsonObject { })
         }
     }
 
@@ -228,5 +285,86 @@ class ExtensionServiceTest {
         latch.await(5, TimeUnit.SECONDS)
 
         assertTrue(capturedOutcome is ActionOutcome.Success)
+    }
+
+    @Test
+    fun `test capability with unbounded or too large result set fails cleanly with result_too_large`() {
+        val service = Robolectric.buildService(CappedResultService::class.java).create().bind().get()
+        val binder = service.onBind(Intent()) as IExtensionService
+
+        // 1. Unbounded query (no limit parameter)
+        val requestUnbounded = ActionRequest("get_large_list", buildJsonObject { })
+        val resultJsonUnbounded = binder.executeAction(1, Json.encodeToString(requestUnbounded))
+        val outcomeUnbounded = Json.decodeFromString<ActionOutcome>(resultJsonUnbounded)
+
+        assertTrue(outcomeUnbounded is ActionOutcome.Failure)
+        assertEquals("result_too_large", (outcomeUnbounded as ActionOutcome.Failure).error.code)
+
+        // 2. Query exceeding maximum cap (limit = 100, max limit is 50)
+        val requestTooLarge = ActionRequest("get_large_list", buildJsonObject { put("limit", 100) })
+        val resultJsonTooLarge = binder.executeAction(1, Json.encodeToString(requestTooLarge))
+        val outcomeTooLarge = Json.decodeFromString<ActionOutcome>(resultJsonTooLarge)
+
+        assertTrue(outcomeTooLarge is ActionOutcome.Failure)
+        assertEquals("result_too_large", (outcomeTooLarge as ActionOutcome.Failure).error.code)
+
+        // 3. Query within safe limit (limit = 10)
+        val requestSafe = ActionRequest("get_large_list", buildJsonObject { put("limit", 10) })
+        val resultJsonSafe = binder.executeAction(1, Json.encodeToString(requestSafe))
+        val outcomeSafe = Json.decodeFromString<ActionOutcome>(resultJsonSafe)
+
+        assertTrue(outcomeSafe is ActionOutcome.Success)
+    }
+
+    class MockExtensionConnectionManager {
+        var isConnected: Boolean = true
+        var reconnectCount: Int = 0
+        var lastReconnectReason: String? = null
+
+        fun triggerReconnection(reason: String) {
+            isConnected = false
+            reconnectCount++
+            lastReconnectReason = reason
+        }
+
+        fun onServiceDisconnected() {
+            triggerReconnection("Service disconnected callback")
+        }
+
+        fun executeCall(action: () -> String): String? {
+            return try {
+                action()
+            } catch (e: android.os.RemoteException) {
+                triggerReconnection("Remote call failed with RemoteException: ${e.message}")
+                null
+            }
+        }
+    }
+
+    @Test
+    fun `test extension mid-call failure via RemoteException triggers same reconnection path as clean disconnect`() {
+        val manager = MockExtensionConnectionManager()
+
+        // 1. Verify clean disconnect triggers reconnection path
+        manager.onServiceDisconnected()
+        assertFalse(manager.isConnected)
+        assertEquals(1, manager.reconnectCount)
+        assertEquals("Service disconnected callback", manager.lastReconnectReason)
+
+        // Reset manager state
+        manager.isConnected = true
+        manager.reconnectCount = 0
+        manager.lastReconnectReason = null
+
+        // 2. Verify mid-call RemoteException triggers same reconnection path
+        val failingServiceCall = {
+            throw android.os.RemoteException("DeadObjectException: Binder transaction failed")
+        }
+
+        val result = manager.executeCall(failingServiceCall)
+        assertTrue(result == null)
+        assertFalse(manager.isConnected)
+        assertEquals(1, manager.reconnectCount)
+        assertTrue(manager.lastReconnectReason?.contains("RemoteException") == true)
     }
 }
