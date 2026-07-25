@@ -24,3 +24,20 @@ The protocol handles operations requiring explicit user confirmation in a strict
 
 ## Launcher Interface
 The SDK repo defines the `IOmniLauncherInterface` AIDL as the single source of truth for the launcher IPC contract. However, the Omni-launcher repo does **not** take a direct dependency on this SDK. Instead, it copies the `.aidl` file text directly. The actual implementation (the Service and Binder stub) lives exclusively in the Omni-launcher repo, mapping these calls to Lawnchair/Launcher3 internals.
+
+## Binder Transaction Size Limits
+The shared Binder transaction buffer is a fixed ~1MB per process (covering all in-flight calls on the thread pool, not just the current one). Any capability that could return an unbounded list — a broad photo search, a large notes collection, a long price-history query — risks throwing `TransactionTooLargeException` and crashing the caller/service if it exceeds this threshold.
+
+**Rule:** Every capability returning a list must either paginate (using a `limit`/`cursor`-style parameter) or hard-cap the result size defensively inside `onAction()`. They must never return an unbounded collection and hope it stays small in practice. If a result set exceeds reasonable limits, it should be capped, and the outcome should be cleanly handled (e.g., returning a capped list with a flag indicating truncation, or failing cleanly with a documented error code like `result_too_large`).
+
+## Handling Remote Exceptions and Process Deaths
+When making remote IPC calls across process boundaries, the target process/extension can crash, get killed by the Android OS low-memory killer (LMK), or die mid-call.
+
+In such cases, the live call fails via an exception thrown directly out of the AIDL call itself (such as `DeadObjectException` or `RemoteException`). This is a completely separate failure path from the `onServiceDisconnected` callback.
+
+**Rule:** Every remote call site must catch `RemoteException` and route the failure into the same reconnect-with-backoff path, rather than relying solely on the `onServiceDisconnected` callback firing separately. This ensures consistent recovery across all failure scenarios.
+
+## Security: Data as Untrusted Input
+The rule that external content is data, not commands, must be generalized beyond webpage scraping. The payment vault already treats webpage content the caller reads as untrusted data that the agent may reason about but must never obey as instructions.
+
+**Rule:** Any data returned by any extension — including a note's body, a photo's metadata, a calendar event description, or an event payload — must be treated as untrusted data. Any of these sources could contain crafted text attempting an indirect prompt injection to redirect the agent's next action. Callers/Consumers must ensure that such returned data is only treated as data to be processed, and never treated as commands or instruction sources for the LLM agent.
