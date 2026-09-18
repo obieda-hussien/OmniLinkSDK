@@ -18,3 +18,9 @@
     public *;
     protected *;
 }
+
+# Omni agent gateway AIDL
+-keep interface com.omnilink.sdk.IAgentGatewayService { *; }
+-keep class com.omnilink.sdk.IAgentGatewayService$Stub { *; }
+-keep interface com.omnilink.sdk.IOmniAgentCallback { *; }
+-keep class com.omnilink.sdk.IOmniAgentCallback$Stub { *; }
