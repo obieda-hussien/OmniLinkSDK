@@ -4,6 +4,7 @@ import com.omnilink.sdk.IOmniEventCallback;
 import com.omnilink.sdk.IOmniResultCallback;
 
 interface IExtensionService {
+    String getCapabilityManifest();
     String executeAction(int protocolVersion, String requestJson);
     oneway void executeActionAsync(int protocolVersion, String requestJson, IOmniResultCallback callback);
     boolean registerEventListener(IOmniEventCallback callback);
