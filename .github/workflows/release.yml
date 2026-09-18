@@ -1,0 +1,90 @@
+name: Release SDK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "omni-link-sdk/src/main/java/com/omnilink/sdk/OmniLinkConstants.kt"
+      - ".github/workflows/release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: omnilink-release
+  cancel-in-progress: false
+
+jobs:
+  tag-and-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve SDK version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(sed -n 's/.*SDK_VERSION = "\([^"]*\)".*/\1/p' omni-link-sdk/src/main/java/com/omnilink/sdk/OmniLinkConstants.kt | head -n1)"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid SDK_VERSION: '$VERSION'"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Check whether release already exists
+        id: exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        shell: bash
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create version tag
+        if: steps.exists.outputs.exists != 'true'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "OmniLinkSDK $TAG"
+          git push origin "$TAG"
+
+      - name: Create GitHub release
+        if: steps.exists.outputs.exists != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        shell: bash
+        run: |
+          gh release create "$TAG" \
+            --verify-tag \
+            --title "OmniLinkSDK $TAG" \
+            --generate-notes
+
+      - name: Release summary
+        run: |
+          {
+            echo "## OmniLinkSDK ${{ steps.version.outputs.tag }}"
+            echo ""
+            echo "Release existed before run: ${{ steps.exists.outputs.exists }}"
+            echo "JitPack coordinate: `com.github.obieda-hussien:OmniLinkSDK:${{ steps.version.outputs.tag }}`"
+          } >> "$GITHUB_STEP_SUMMARY"

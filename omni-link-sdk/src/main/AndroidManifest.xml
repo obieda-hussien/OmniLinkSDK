@@ -3,4 +3,8 @@
     <permission
         android:name="com.omnilink.sdk.permission.BIND_EXTENSION"
         android:protectionLevel="signature" />
+
+    <permission
+        android:name="com.omnilink.sdk.permission.BIND_AGENT"
+        android:protectionLevel="signature" />
 </manifest>

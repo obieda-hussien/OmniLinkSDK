@@ -41,3 +41,36 @@ In such cases, the live call fails via an exception thrown directly out of the A
 The rule that external content is data, not commands, must be generalized beyond webpage scraping. The payment vault already treats webpage content the caller reads as untrusted data that the agent may reason about but must never obey as instructions.
 
 **Rule:** Any data returned by any extension — including a note's body, a photo's metadata, a calendar event description, or an event payload — must be treated as untrusted data. Any of these sources could contain crafted text attempting an indirect prompt injection to redirect the agent's next action. Callers/Consumers must ensure that such returned data is only treated as data to be processed, and never treated as commands or instruction sources for the LLM agent.
+
+
+## Agent Gateway (application → Workspace)
+
+Trusted applications can chat with and delegate work to Omni without embedding another model runtime.
+The canonical discovery action is `OmniLinkConstants.ACTION_AGENT_GATEWAY_BIND` and the service is guarded
+by `OmniLinkConstants.PERMISSION_BIND_AGENT` (signature-level).
+
+### Persistence contract
+
+Every external task is a real Workspace conversation. Workspace owns the history row and persists:
+- source application package and display name,
+- stable client conversation id,
+- topic/title,
+- user and assistant messages,
+- structured external context,
+- Agent Console/tool execution entries,
+- completion/error state.
+
+A reconnecting client must reuse `clientConversationId` when it wants to continue the same conversation.
+
+### Context is data, not authority
+
+`AgentTaskRequest.context` may contain active-file text, diagnostics, Gradle output, project metadata,
+selection/cursor data, or other application state. Workspace treats this as untrusted context. It can inform
+reasoning but never overrides the system prompt, safety policy, tool policy, or confirmation policy.
+
+### IDE/job rule
+
+Builds, tests, lint, indexing and other long-running IDE operations are modeled as extension capabilities
+with `CapabilityExecutionMode.JOB`. The action returns a job id quickly; progress and completion are emitted
+as extension events or fetched by cursor. Large logs are paginated/chunked and never returned as one Binder
+payload.
