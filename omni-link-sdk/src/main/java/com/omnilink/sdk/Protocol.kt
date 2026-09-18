@@ -30,14 +30,18 @@ data class ActionError(
 @Serializable
 data class CapabilityDescriptor(
     val name: String,
+    val description: String = "",
     val destructive: Boolean = false,
-    val requiresConfirmation: Boolean = false
-) {
-    // Note: v2-candidate fields to add only when a real capability needs one, not speculatively:
-    // - cost
-    // - estimatedTime
-    // - streamingSupported
-    // - offline
+    val requiresConfirmation: Boolean = false,
+    val executionMode: CapabilityExecutionMode = CapabilityExecutionMode.ASYNC,
+    val supportsStreaming: Boolean = false
+)
+
+@Serializable
+enum class CapabilityExecutionMode {
+    IMMEDIATE,
+    ASYNC,
+    JOB
 }
 
 @Serializable
