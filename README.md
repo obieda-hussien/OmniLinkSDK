@@ -3,7 +3,7 @@
 
 This is now its own GitHub repo, not a folder copied between projects. Every satellite app (and Workspace itself) consumes it via JitPack + a version tag. Fed to the agent first, before any of the other five repos.
 
-*   **Latest Release:** [v1.0.0](https://github.com/obieda-hussien/OmniLinkSDK/releases/tag/v1.0.0)
+*   **Latest Release:** [v1.1.0](https://github.com/obieda-hussien/OmniLinkSDK/releases/tag/v1.1.0)
 *   **JitPack Artifacts:** [obieda-hussien/OmniLinkSDK](https://jitpack.io/#obieda-hussien/OmniLinkSDK)
 
 ## R8 Minification & Shrinking
@@ -23,7 +23,7 @@ dependencyResolutionManagement {
 
 // app/build.gradle.kts (consumer)
 dependencies {
-    implementation("com.github.obieda-hussien:OmniLinkSDK:v1.0.0")
+    implementation("com.github.obieda-hussien:OmniLinkSDK:v1.1.0")
 }
 ```
 
