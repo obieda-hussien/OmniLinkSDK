@@ -22,6 +22,21 @@ abstract class ExtensionService : Service() {
     // Optional robust security validator (defaults to null for backward compatibility unless specified)
     open val securityValidator: SecurityValidator? = null
 
+    /**
+     * Discoverable capability metadata. Subclasses should override [capabilities] at minimum.
+     * Keeping a default here makes the wire upgrade source-compatible with existing services.
+     */
+    open val capabilities: List<CapabilityDescriptor> = emptyList()
+
+    open val capabilityManifest: CapabilityManifest
+        get() = CapabilityManifest(
+            protocolVersion = maxSupportedVersion,
+            sdkVersion = OmniLinkConstants.SDK_VERSION,
+            minSupportedVersion = minSupportedVersion,
+            maxSupportedVersion = maxSupportedVersion,
+            capabilities = capabilities
+        )
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     abstract suspend fun onAction(caller: CallerContext, request: ActionRequest): ActionOutcome
@@ -114,6 +129,9 @@ abstract class ExtensionService : Service() {
     }
 
     private val binder = object : IExtensionService.Stub() {
+        override fun getCapabilityManifest(): String =
+            Json.encodeToString(capabilityManifest)
+
         override fun executeAction(protocolVersion: Int, requestJson: String): String {
             val callerContext = resolveCaller()
             val outcome = executeInternal(protocolVersion, requestJson, callerContext)
