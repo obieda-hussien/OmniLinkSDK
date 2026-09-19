@@ -1,14 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Required for OmniLink's optional encrypted LAN/desktop transport. Both are normal
-         permissions; consumers still decide whether to actually start/connect a transport. -->
+    <!--
+      OmniLink v2 deliberately does NOT declare the privileged custom permissions here.
+
+      BIND_EXTENSION and BIND_AGENT are owned/declared by the Omni core host application
+      (currently OmniDev Workspace). A library manifest must not let arbitrary consumers become
+      permission definers simply by importing an AAR.
+    -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-
-    <permission
-        android:name="com.omnilink.sdk.permission.BIND_EXTENSION"
-        android:protectionLevel="signature" />
-
-    <permission
-        android:name="com.omnilink.sdk.permission.BIND_AGENT"
-        android:protectionLevel="signature" />
 </manifest>
