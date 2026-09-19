@@ -1,5 +1,9 @@
-<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for OmniLink's optional encrypted LAN/desktop transport. Both are normal
+         permissions; consumers still decide whether to actually start/connect a transport. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <permission
         android:name="com.omnilink.sdk.permission.BIND_EXTENSION"
         android:protectionLevel="signature" />
