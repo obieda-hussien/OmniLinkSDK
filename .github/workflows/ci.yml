@@ -6,7 +6,11 @@ on:
     tags:
       - 'v*.*.*'
   pull_request:
-    branches: [ main, master ]
+    branches:
+      - main
+      - master
+      - 'feature/**'
+  workflow_dispatch:
 
 jobs:
   build_and_test:
@@ -21,7 +25,7 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Build and Test
+      - name: Build Android + JVM transport and run tests
         run: ./gradlew build test --stacktrace
 
   publish_verify:
@@ -37,5 +41,5 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Verify Publish
+      - name: Verify all publications
         run: ./gradlew publishToMavenLocal --stacktrace
