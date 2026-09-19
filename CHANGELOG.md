@@ -4,6 +4,34 @@ All notable OmniLinkSDK changes are documented here.
 
 The repository version is sourced from `OMNILINK_VERSION` in `gradle.properties`.
 
+## 1.4.1
+
+### Build toolchain
+
+- Upgraded Android Gradle Plugin from 8.5.1 to 8.13.2.
+- Upgraded the Gradle distribution from 8.8 to 8.13 with the official SHA-256 checksum.
+- Upgraded Kotlin Android/JVM/serialization plugins from 2.0.0 to 2.4.20.
+- Upgraded kotlinx.serialization JSON from 1.7.0 to 1.11.0.
+- Upgraded kotlinx.coroutines core/Android/test from 1.8.1 to 1.11.0.
+- Upgraded Robolectric from 4.11.1 to 4.17.
+- Kept JDK 17 and the deployed Binder protocol version unchanged.
+
+### CI and supply chain
+
+- Upgraded actions/checkout to 7.0.1.
+- Upgraded actions/setup-java to 6.0.1.
+- Upgraded actions/dependency-review-action to 5.0.0.
+- Upgraded gradle/actions wrapper validation to 6.3.0.
+- Continued pinning all external GitHub Actions to immutable commit SHAs.
+- Added Dependabot guardrails so AGP 9 and Gradle 9 are not upgraded independently.
+- Changed release automation so an already-published version is a clean no-op while an orphan tag remains fail-closed.
+
+### Compatibility
+
+- This is a build/dependency patch release; OmniLink public APIs and AIDL transaction ordering are unchanged.
+- Android Binder protocol remains version 4.
+- The toolchain intentionally stays on AGP 8.x to avoid an implicit AGP 9 built-in-Kotlin migration.
+
 ## 1.4.0
 
 ### Cross-platform transport
