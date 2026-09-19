@@ -44,6 +44,7 @@ jobs:
             echo "::error::Automated releases may only run from main."
             exit 1
           }
+          bash scripts/security_sanity.sh
           bash scripts/verify_docs_version.sh
           ./gradlew build test publishToMavenLocal --stacktrace
 
