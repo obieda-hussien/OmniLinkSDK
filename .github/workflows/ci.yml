@@ -38,6 +38,9 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      - name: Security sanity checks
+        run: bash scripts/security_sanity.sh
+
       - name: Verify documentation version
         run: bash scripts/verify_docs_version.sh
 
