@@ -46,5 +46,9 @@ class AgentGatewayProtocolTest {
         assertTrue(manifest.supportsTools)
         assertTrue(manifest.supportsPersistentHistory)
         assertTrue(manifest.supportsAgentConsole)
+        assertEquals(false, manifest.supportsHistoryRead)
+        assertEquals(false, manifest.supportsEventReplay)
     }
 }
+
+
