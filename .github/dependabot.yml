@@ -14,6 +14,15 @@ updates:
       - "obieda-hussien"
     commit-message:
       prefix: "deps"
+    # AGP 9 and Gradle 9 require a coordinated build-system migration.
+    # Do not let Dependabot upgrade either independently.
+    ignore:
+      - dependency-name: "com.android.library"
+        versions:
+          - ">= 9.0.0"
+      - dependency-name: "gradle-wrapper"
+        versions:
+          - ">= 9.0.0"
     groups:
       kotlin-runtime:
         patterns:
