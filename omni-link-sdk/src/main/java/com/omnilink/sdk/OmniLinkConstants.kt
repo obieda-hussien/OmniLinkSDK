@@ -9,11 +9,11 @@ object OmniLinkConstants {
     val SDK_VERSION: String = BuildConfig.OMNILINK_SDK_VERSION
 
     /**
-     * Existing JSON/Binder wire protocol remains v4 across the 1.4.x release line. Trust/session/transport additions are
-     * additive and opt-in; bump this only when a deployed wire contract requires negotiation.
+     * v2 keeps the deployed AIDL transaction ordering intact. Protocol 5 marks the stricter
+     * trusted/public integration contract while negotiation remains backward-compatible with v4.
      */
-    const val CURRENT_PROTOCOL_VERSION = 4
-    const val SESSION_PROTOCOL_VERSION = 1
+    const val CURRENT_PROTOCOL_VERSION = 5
+    const val SESSION_PROTOCOL_VERSION = 2
 
     const val DEFAULT_MAX_INLINE_JSON_BYTES = 256 * 1024
     const val DEFAULT_ASYNC_CONCURRENCY = 8
