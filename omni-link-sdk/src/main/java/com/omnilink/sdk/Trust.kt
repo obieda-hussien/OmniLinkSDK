@@ -82,8 +82,9 @@ class DefaultTrustResolver(
 
     override fun resolve(context: Context, caller: CallerContext): TrustPrincipal {
         val packages = caller.callingPackages.ifEmpty { listOf(caller.callingPackage) }
+        // Recompute trust from the kernel UID/platform signer check. CallerContext's cached
+        // sameSignerAsHost value is informational and is never treated as authority.
         val sameSigner = caller.callingUid == Process.myUid() ||
-            caller.sameSignerAsHost ||
             context.packageManager.checkSignatures(caller.callingUid, Process.myUid()) ==
             PackageManager.SIGNATURE_MATCH
 
@@ -97,7 +98,12 @@ class DefaultTrustResolver(
             )
         }
 
-        val signerSet = caller.signingCertificateSha256.map(::normalizeCertificateHash).toSet()
+        val signerSet = caller.signingCertificateSha256
+            .ifEmpty {
+                packages.flatMap { SigningCertificateUtils.sha256ForPackage(context, it) }
+            }
+            .map(::normalizeCertificateHash)
+            .toSet()
         val partner = normalizedPartnerRules.firstOrNull { rule ->
             rule.signerSha256.any(signerSet::contains)
         }
