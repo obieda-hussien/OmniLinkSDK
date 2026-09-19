@@ -448,5 +448,5 @@ private fun readHandshakeFrame(input: DataInputStream): ByteArray {
     if (length !in 1..OmniTransportConstants.MAX_HANDSHAKE_FRAME_BYTES) {
         throw TransportFrameTooLargeException("Invalid handshake frame length $length")
     }
-    return ByteArray(length).also(input::readFully)
+    return ByteArray(length).also { input.readFully(it) }
 }
