@@ -30,5 +30,6 @@ require_text SIGNING_TRUST.md "OmniLink $LINE"
 require_text OMNILINK_TRUST_MESH.md "OmniLink $LINE"
 require_text DESKTOP_TRANSPORT.md "OmniLink $LINE"
 require_text CHANGELOG.md "## $VERSION"
+require_text V2_ARCHITECTURE.md "OmniLinkSDK 2.0"
 
 echo "Documentation version checks passed for OmniLinkSDK $VERSION"
