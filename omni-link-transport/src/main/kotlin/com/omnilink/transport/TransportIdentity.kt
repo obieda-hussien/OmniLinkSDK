@@ -94,6 +94,7 @@ class JvmEcSigningIdentity private constructor(
     }
 }
 
+@kotlinx.serialization.Serializable
 data class ExportedJvmIdentity(
     val peerId: String,
     val role: PeerRole,
