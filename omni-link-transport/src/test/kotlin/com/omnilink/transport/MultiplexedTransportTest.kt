@@ -67,6 +67,10 @@ class MultiplexedTransportTest {
         )
         val client = OmniMultiplexedConnection(clientRaw, this)
 
+        val eventDeferred = async {
+            withTimeout(5_000) { client.events.first() }
+        }
+
         val a = async { client.requestUtf8("rpc.echo", "alpha") }
         val b = async { client.requestUtf8("rpc.echo", "beta") }
 
@@ -76,7 +80,7 @@ class MultiplexedTransportTest {
         )
         assertEquals(setOf("ALPHA", "BETA"), results)
 
-        val event = withTimeout(5_000) { client.events.first() }
+        val event = eventDeferred.await()
         assertEquals("event.ready", event.capability)
         assertEquals("ok", event.payload.toString(Charsets.UTF_8))
 
