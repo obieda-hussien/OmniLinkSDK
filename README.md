@@ -303,3 +303,7 @@ for the Android and JVM modules.
 - [00_INTEGRATION_ORDER.md](00_INTEGRATION_ORDER.md) — rollout order for a consumer ecosystem.
 - [01_OmniLinkSDK_PROMPT.md](01_OmniLinkSDK_PROMPT.md) — maintainer/agent release invariants.
 - [CHANGELOG.md](CHANGELOG.md) — version history.
+- [SECURITY.md](SECURITY.md) — vulnerability reporting and security invariants.
+- [REPOSITORY_HARDENING.md](REPOSITORY_HARDENING.md) — GitHub rulesets, Actions, secrets and access policy.
+- [LICENSE](LICENSE) — proprietary source-available terms.
+- [NOTICE.md](NOTICE.md) — copyright and ownership notice.
