@@ -1,0 +1,100 @@
+Omni Reference Source License 1.0
+Copyright (c) 2026 Abdelrahman Hussein (عبدالرحمن حسين)
+All Rights Reserved.
+
+1. Ownership
+
+The source code, documentation, protocol descriptions, examples, build files, tests, names, text,
+graphics, and other original material in this repository (the "Software") are copyrighted works owned
+by Abdelrahman Hussein, except for third-party components that retain their own licenses.
+
+No ownership rights are transferred by making the source publicly viewable.
+
+2. Limited reference permission
+
+You may view and study the publicly available source for learning, security review, interoperability
+under applicable law, and understanding the ideas and architecture.
+
+You may independently implement similar ideas, concepts, patterns, or functionality in your own
+software provided that you do not copy protected source code, documentation, non-public material, or
+project branding, and do not imply that your implementation is an official Omni product.
+
+This permission does not grant a license to use the Software itself in another product.
+
+3. No general license to copy, modify, or distribute
+
+Except for the limited rights unavoidably provided by GitHub's Terms of Service for content hosted
+publicly on GitHub, no permission is granted to:
+
+- copy or reproduce substantial portions of the Software;
+- modify, adapt, translate, or create derivative works from the Software;
+- redistribute, republish, mirror, re-license, sublicense, sell, rent, or commercially exploit the
+  Software;
+- publish modified builds or binaries derived from the Software;
+- use the Software as part of another application, SDK, service, library, or commercial offering;
+- remove or obscure copyright, ownership, attribution, or license notices;
+- use the Omni, OmniLink, OmniLinkSDK, or related project names or branding in a way that suggests
+  sponsorship, endorsement, or official affiliation.
+
+Any permission not expressly granted is reserved.
+
+4. GitHub public-repository exception
+
+GitHub's Terms of Service may permit users of GitHub to view and fork public repositories through
+GitHub's own functionality. Such platform-hosted viewing or forking does not grant any additional
+copyright license to use, modify, distribute, publish, sublicense, sell, or create derivative works
+from the Software beyond rights that cannot be excluded while the repository is public on GitHub.
+
+A GitHub fork is therefore not permission to publish a modified product or redistribute the Software.
+
+5. Contributions
+
+Public code contributions are not accepted unless the copyright owner explicitly authorizes them.
+
+Submission of an issue, discussion, vulnerability report, or idea does not grant the submitter rights
+in the Software.
+
+If the owner explicitly invites and accepts a code contribution, the contributor represents that they
+have the right to submit it and grants Abdelrahman Hussein a perpetual, worldwide, irrevocable,
+transferable, sublicensable, royalty-free license to use, reproduce, modify, distribute, relicense,
+and otherwise exploit that contribution as part of this project or related products, unless a separate
+written agreement says otherwise.
+
+6. Security research
+
+Good-faith security research is permitted only to the extent allowed by applicable law and the
+repository's SECURITY.md. Security testing does not grant permission to access systems, accounts,
+devices, or data that you do not own or have explicit authorization to test.
+
+7. No warranty
+
+THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
+TITLE, NON-INFRINGEMENT, SECURITY, RELIABILITY, AVAILABILITY, OR ERROR-FREE OPERATION.
+
+8. Limitation of liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE COPYRIGHT OWNER, AUTHORS, AND CONTRIBUTORS
+SHALL NOT BE LIABLE FOR ANY CLAIM, LOSS, DAMAGE, DATA LOSS, DEVICE DAMAGE, SECURITY INCIDENT,
+BUSINESS INTERRUPTION, PERSONAL INJURY, INDIRECT DAMAGE, CONSEQUENTIAL DAMAGE, OR OTHER LIABILITY
+ARISING FROM OR RELATED TO THE SOFTWARE, ITS USE, MISUSE, MODIFICATION, DISTRIBUTION, INTEGRATION, OR
+INABILITY TO USE IT.
+
+YOU ARE RESPONSIBLE FOR VERIFYING THAT YOUR USE IS LAWFUL, SAFE, AUTHORIZED, AND APPROPRIATE FOR YOUR
+DEVICE, DATA, USERS, AND JURISDICTION.
+
+9. Prohibited implication
+
+Nothing in this license authorizes malware, unauthorized access, circumvention of security controls,
+privacy violations, unlawful surveillance, destructive activity, or any other unlawful use.
+
+10. Termination
+
+Any permission granted by this license terminates automatically if you violate these terms. Sections
+concerning ownership, restrictions, warranty, liability, and reserved rights survive termination.
+
+11. Separate permission
+
+Additional rights may be granted only by a separate written permission from the copyright owner.
+
+This is a source-available proprietary license. It is not an open-source license.

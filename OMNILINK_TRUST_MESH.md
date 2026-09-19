@@ -1,4 +1,4 @@
-# OmniLink 1.3 — Trust Mesh, Capability Graph and Runtime Hardening
+# OmniLink 1.4 — Trust Mesh, Capability Graph and Device Trust
 
 ## Design objective
 
@@ -17,9 +17,15 @@ The architecture separates four questions that must never be collapsed into one:
 
 `CORE`, `FIRST_PARTY`, `TRUSTED_PARTNER`, and `UNTRUSTED` are modeled by `TrustTier`.
 
-First-party same-signer applications are eligible for bidirectional OmniLink communication. Trusted
-partners use their own signing certificate and a narrow capability allowlist. Untrusted applications
-cannot enter privileged Binder surfaces.
+First-party same-signer applications are eligible for privileged Binder communication, subject to
+capability and access policy.
+
+Trusted partners keep their own identity and receive only explicit authority. A differently-signed
+partner does not bypass Android's signature permission merely because application-level trust policy
+recognizes its certificate.
+
+Untrusted applications cannot enter privileged Binder surfaces. Their intended inbound path is the
+Public Gateway, normally mapped by the host to CHAT-only behavior.
 
 ## Capability contracts
 
@@ -113,9 +119,9 @@ matters.
 True cross-process credit-based flow control is represented by the new session protocol and remains an
 opt-in runtime feature to wire into services incrementally.
 
-## Session protocol
+## Session protocol models
 
-`OmniSessionHello` and `OmniFrame` provide a transport-independent model for:
+`OmniSessionHello` and `OmniFrame` provide transport-independent models for:
 
 - multiplexed requests,
 - results,
@@ -128,8 +134,12 @@ opt-in runtime feature to wire into services incrementally.
 
 The model also negotiates codecs and payload transports.
 
-Android Binder remains the current transport. The session contract intentionally contains no Android
-classes so the same semantics can later run over sockets, LAN, USB/ADB or desktop transports.
+In 1.4, Android Binder remains the privileged same-device transport, while the new pure JVM
+`omni-link-transport` module implements real authenticated encrypted TCP communication for LAN,
+localhost and ADB tunnels.
+
+The SessionProtocol types and the TCP runtime are related foundations, but consumers must not claim a
+feature is wired end to end merely because both models exist.
 
 ## Large payload strategy
 
@@ -167,7 +177,7 @@ A separate public request surface exists for intentionally limited share/ask/ope
 
 ## Compatibility strategy
 
-SDK 1.3 keeps the deployed Binder method order and `CURRENT_PROTOCOL_VERSION = 4`.
+SDK 1.4 keeps the deployed Binder method order and `CURRENT_PROTOCOL_VERSION = 4`.
 
 New fields have conservative defaults and the canonical `OmniJson` codec omits defaults while
 ignoring unknown fields on upgraded peers. Runtime feature flags remain false until Workspace really
@@ -178,13 +188,67 @@ migration path.
 
 ## Recommended integration order
 
-1. Merge/release OmniLink 1.3.
-2. Move all first-party apps to the shared signing keys.
-3. Upgrade Workspace Agent Gateway identity resolution to `CallerIdentityResolver`.
-4. Upgrade each extension manifest with explicit capabilities and trust/data metadata.
-5. Build Workspace's capability graph from cached manifests.
-6. Wire preview/commit for destructive tools.
-7. Add external app routing.
-8. Add task-DAG rendering/scheduling to Workspace/AndroidIDE.
-9. Implement actual FD/pipe large-payload Binder methods and benchmarks.
-10. Implement session credit flow control and transport adapters only after both endpoints support it.
+1. Read [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) and classify the consumer.
+2. First-party Android apps adopt the shared signing identity before privileged Binder integration.
+3. Declare semantic capability manifests with trust, direction, risk and data scopes.
+4. Wire Binder ExtensionService/Agent Gateway only where the host really implements them.
+5. Unknown apps stay on Public Gateway CHAT-only behavior.
+6. Trusted partners use a narrow public or encrypted-transport surface rather than the Omni signing key.
+7. Desktop peers pair at low privilege, then are promoted explicitly with inbound/outbound ACLs.
+8. Add preview/commit and task/capability graphs only in runtimes that can execute them.
+9. Add large-payload and strict credit-based flow control only after both endpoints support them.
+10. Add benchmarks/regression budgets before raising transport or concurrency limits.
+
+
+## Transport trust mesh in 1.4
+
+The network/device transport has a separate trust ladder:
+
+```text
+UNTRUSTED
+PAIRED
+TRUSTED_PARTNER
+FIRST_PARTY
+CORE
+```
+
+This does not replace Android Binder trust tiers.
+
+Every network peer is pinned by transport public-key fingerprint and receives separate inbound and
+outbound capability ACLs.
+
+PAIRED is intentionally constrained. Its hard capability ceiling is:
+
+```text
+chat.*
+search.*
+summarize.*
+translate.*
+extract.*
+```
+
+plus reserved authenticated transport health controls.
+
+Even a wildcard ACL cannot grant a PAIRED peer terminal, Agent/Team, root/system control, private
+memory or project-modification namespaces.
+
+## Trust boundaries by integration type
+
+| Integration | Identity proof | Authority source |
+|---|---|---|
+| First-party Android Binder | Android UID/signing relationship + same-signer validator | Capability metadata + AccessController + confirmation |
+| Trusted Android partner | partner/public surface policy; privileged Binder needs explicit host design | explicit partner allowlist |
+| Unknown app | public request surface | CHAT-only host policy |
+| Paired PC/device | pinned transport key + signed handshake | PAIRED hard ceiling + ACL |
+| Trusted PC/device | pinned transport key + explicit promotion | transport trust level + inbound/outbound ACL |
+| External app controlled by Omni | adapter/platform permissions | route policy + user grants/confirmation |
+
+## Runtime honesty
+
+The SDK contains protocol types for capability graphs, task DAGs, preview/commit, session negotiation
+and large-payload transports.
+
+A consuming product must only advertise support after it implements the behavior end to end.
+
+OmniLink's job is to make that distinction explicit rather than let protocol availability masquerade
+as runtime capability.

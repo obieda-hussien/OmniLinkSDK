@@ -1,0 +1,12 @@
+# OmniLinkSDK is owner-maintained.
+* @obieda-hussien
+
+# Security/release/legal surfaces require the owner.
+.github/ @obieda-hussien
+LICENSE @obieda-hussien
+NOTICE.md @obieda-hussien
+SECURITY.md @obieda-hussien
+gradle/ @obieda-hussien
+gradle.properties @obieda-hussien
+omni-link-sdk/ @obieda-hussien
+omni-link-transport/ @obieda-hussien

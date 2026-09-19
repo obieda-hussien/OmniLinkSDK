@@ -13,4 +13,5 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "OmniLinkSDK"
+include(":omni-link-transport")
 include(":omni-link-sdk")

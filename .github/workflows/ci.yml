@@ -1,41 +1,72 @@
 name: CI
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [ main, master ]
     tags:
       - 'v*.*.*'
   pull_request:
-    branches: [ main, master ]
+    branches:
+      - main
+      - master
+      - 'feature/**'
+  workflow_dispatch:
 
 jobs:
   build_and_test:
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@ed408507eac070d1f99cc633dbcf757c94c7933a
 
       - name: set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: gradle
 
-      - name: Build and Test
+      - name: Security sanity checks
+        run: bash scripts/security_sanity.sh
+
+      - name: Verify documentation version
+        run: bash scripts/verify_docs_version.sh
+
+      - name: Build Android + JVM transport and run tests
         run: ./gradlew build test --stacktrace
+
+      - name: Verify local Maven publications
+        run: ./gradlew publishToMavenLocal --stacktrace
 
   publish_verify:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@ed408507eac070d1f99cc633dbcf757c94c7933a
 
       - name: set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: gradle
 
-      - name: Verify Publish
+      - name: Verify all publications
         run: ./gradlew publishToMavenLocal --stacktrace

@@ -1,102 +1,309 @@
-# OmniLinkSDK
+# OmniLinkSDK 1.4
 
 [![](https://jitpack.io/v/obieda-hussien/OmniLinkSDK.svg)](https://jitpack.io/#obieda-hussien/OmniLinkSDK)
 
-OmniLinkSDK is the shared protocol, trust and IPC substrate for the Omni ecosystem. It lets first-party
-apps expose capabilities to Omni, lets trusted first-party clients embed the Workspace agent, and keeps
-foreign-app interoperability isolated from privileged Binder surfaces.
+OmniLinkSDK is the protocol, trust, IPC and encrypted device-link layer for the Omni ecosystem.
 
-The source version is defined once in `gradle.properties` as `OMNILINK_VERSION`. The current source
-line is **1.3.0**; merging a new version to `main` automatically creates the matching `vX.Y.Z` tag and
-GitHub release.
+**Copyright © 2026 Abdelrahman Hussein (عبدالرحمن حسين). All rights reserved.**
 
-## 1.3 architecture
+This repository is **source-available, not open source**. You may study the architecture and independently
+implement similar ideas, but copying, modifying, redistributing, republishing, sublicensing, selling,
+or shipping derivative builds of this source is not permitted except for the limited GitHub-hosted
+rights that apply to public repositories. See [LICENSE](LICENSE), [NOTICE.md](NOTICE.md), and
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
-OmniLink 1.3 adds:
+Version **1.4.0** supports two distinct integration domains:
 
-- fail-closed same-signer authentication by default,
-- Binder UID/package/certificate identity resolution,
-- CORE / FIRST_PARTY / TRUSTED_PARTNER / UNTRUSTED trust tiers,
-- per-capability trust, direction, risk, data scope, idempotency and schema metadata,
-- bounded async concurrency, deadline/size checks and service-scope cancellation,
-- canonical forward-compatible JSON handling,
-- bounded event buffering plus sequence/replay primitives,
-- transport-independent multiplexed session frames,
-- payload transport negotiation models,
-- capability graph + agent task DAG models,
-- preview -> commit models for destructive operations,
-- one-way foreign-app bridge descriptors,
-- a separate narrow public share/ask/open request contract.
+- same-device Android IPC for first-party Omni apps through Binder/AIDL;
+- authenticated encrypted Android/desktop transport over TCP, LAN, localhost or ADB tunnels.
 
-See [OMNILINK_TRUST_MESH.md](OMNILINK_TRUST_MESH.md) for the architecture and staged integration plan.
-See [SIGNING_TRUST.md](SIGNING_TRUST.md) for the shared Omni signing-key model.
+It also defines safe public/partner integration contracts without weakening the privileged first-party
+surface.
 
-## Consumption
+The version source of truth is:
 
-After the corresponding release tag exists:
+```properties
+OMNILINK_VERSION=1.4.0
+```
+
+in `gradle.properties`.
+
+## Read this first
+
+The canonical integration guide is:
+
+**[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)**
+
+It explains which API to use for:
+
+- a first-party Omni Android app;
+- a trusted partner signed with a different certificate;
+- an unknown third-party app;
+- a desktop/PC companion;
+- an Omni app exposing capabilities to other Omni apps;
+- an app delegating work to the Omni Agent Gateway;
+- Omni controlling a non-integrated external app.
+
+Do not start by copying the most privileged example. Choose the trust surface that matches the caller.
+
+## Modules
+
+### `omni-link-sdk`
+
+Android AAR for first-party Omni applications.
+
+Contains:
+
+- Binder/AIDL extension protocol;
+- privileged Agent Gateway protocol;
+- same-signer security;
+- Binder caller identity resolution;
+- Android trust tiers;
+- capability manifests;
+- action execution and events;
+- public gateway models;
+- external-app bridge models;
+- capability graph / task DAG / preview-commit protocol types;
+- AndroidKeyStore transport identity adapter;
+- Android peer-trust persistence;
+- `omni-link-transport` as an API dependency.
+
+### `omni-link-transport`
+
+Pure JVM module for Android or desktop Java/Kotlin.
+
+Contains:
+
+- TCP client/server;
+- ECDSA P-256 peer identities;
+- ephemeral ECDH session agreement;
+- HKDF-SHA256;
+- AES-256-GCM encrypted frames;
+- replay/out-of-order protection;
+- peer pinning and pairing;
+- directional capability ACLs;
+- hard chat-only PAIRED trust ceiling;
+- multiplexed request/response/event routing;
+- heartbeat, reconnect, backoff and circuit breaker;
+- encrypted JVM identity storage.
+
+## Installation
+
+Add JitPack:
 
 ```kotlin
 dependencyResolutionManagement {
     repositories {
+        google()
+        mavenCentral()
         maven { url = uri("https://jitpack.io") }
     }
 }
+```
 
+### First-party Android app
+
+```kotlin
 dependencies {
-    implementation("com.github.obieda-hussien:OmniLinkSDK:v1.3.0")
+    implementation(
+        "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v1.4.0"
+    )
 }
 ```
 
-JitPack remains the low-friction distribution path. The publication metadata and runtime SDK version
-both derive from `OMNILINK_VERSION`; they can no longer silently drift.
+### Desktop/JVM or transport-only consumer
 
-## Privileged extension surface
+```kotlin
+dependencies {
+    implementation(
+        "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v1.4.0"
+    )
+}
+```
 
-Extensions expose app-owned capabilities through `IExtensionService` / `ExtensionService`.
+### All repository modules
 
-The default security validator is now:
+```kotlin
+dependencies {
+    implementation("com.github.obieda-hussien:OmniLinkSDK:v1.4.0")
+}
+```
+
+For security-sensitive integrations, prefer the exact module you need.
+
+## Trust model
+
+The core rule is:
+
+> Certificate establishes identity. Capabilities establish authority. The user establishes consent.
+
+On Android, first-party apps use a shared signing certificate and signature-level permissions.
+
+Across devices, peers use separate transport identities and explicit public-key pinning.
+
+These are related trust systems, not the same key.
+
+Read:
+
+- [SIGNING_TRUST.md](SIGNING_TRUST.md)
+- [OMNILINK_TRUST_MESH.md](OMNILINK_TRUST_MESH.md)
+- [DESKTOP_TRANSPORT.md](DESKTOP_TRANSPORT.md)
+
+## Quick decision table
+
+| Need | Use |
+|---|---|
+| Omni calls a capability owned by another official Omni Android app | `ExtensionService` / `IExtensionService` |
+| Official Omni app asks Workspace to answer or perform a task | `IAgentGatewayService` protocol |
+| Unknown app shares/asks/opens something in Omni | `PublicOmniRequest` public gateway |
+| Omni controls a non-integrated app | External App Bridge descriptors/router contract |
+| Android talks to PC over LAN/USB tunnel | `omni-link-transport` |
+| One encrypted connection with concurrent requests/events | `OmniMultiplexedConnection` |
+| Long-lived client with reconnect/heartbeat | `OmniReliableClient` |
+| Unknown paired network peer | `PeerTrustProfiles.chatSandbox` |
+| Official paired desktop companion | explicit `FIRST_PARTY` transport trust + narrow ACLs |
+
+## First-party Android security
+
+The SDK defines:
+
+```text
+com.omnilink.sdk.permission.BIND_EXTENSION
+com.omnilink.sdk.permission.BIND_AGENT
+```
+
+Both are signature-level permissions.
+
+`ExtensionService` is also fail-closed with:
 
 ```kotlin
 SameSignerSecurityValidator()
 ```
 
-so privileged calls fail closed unless the Binder caller shares the host's Android signing identity.
-Authentication is still followed by trust/capability policy and the extension's `AccessController`.
+The privileged Binder path is therefore intended for apps signed with the shared Omni key.
 
-Heavy work belongs on `executeActionAsync` or a JOB capability. A declared non-`IMMEDIATE`
-capability is rejected from the synchronous path.
+A differently-signed partner should not be given the Omni private key and should not casually consume
+the first-party Android AAR. Use the public gateway, the pure transport module, or a deliberately
+designed partner-specific Binder surface instead.
 
-## Embedded Omni Agent Gateway
+## Capability model
 
-Trusted first-party applications can delegate work to Workspace through `IAgentGatewayService`.
-Workspace remains the owner of model/runtime state, MCP, web/deep search, local tools, memory, project
-context, history and Agent Console events.
+Capabilities are semantic contracts, for example:
 
-Clients send typed `AgentTaskRequest` values and receive ordered `AgentTaskEvent` events. History
-and replay APIs are append-only and preserve deployed Binder transaction IDs.
+```text
+notes.search
+notes.create
+diagnostics.read
+project.patch
+gradle.build
+git.diff
+media.current_track
+```
 
-The gateway stays protected by the signature-level
-`com.omnilink.sdk.permission.BIND_AGENT` permission. Request payload package names are never trusted;
-the host resolves identity from Binder.
+Each capability can declare:
 
-## Foreign applications
+- execution mode;
+- trust requirement;
+- direction;
+- risk;
+- idempotency;
+- dry-run support;
+- timeout;
+- inline size limit;
+- data scopes;
+- Android permissions;
+- input/output schemas.
 
-A foreign app is not allowed into `BIND_AGENT` / `BIND_EXTENSION`.
+Same signer never means unlimited authority.
 
-Omni may interact outward through adapters such as public APIs, Intents, MediaSession, notification
-actions, Accessibility, Shizuku/shell or root, choosing the lowest-privilege semantic adapter first.
+## Unknown apps
 
-If Workspace wants useful inbound third-party interoperability, it can expose the separate
-`ACTION_PUBLIC_OMNI_REQUEST` Intent for narrowly scoped share/ask/open requests. That public path does
-not weaken the privileged agent gateway.
+Unknown Android apps must not receive privileged Agent or extension Binder access.
 
-## R8
+The intended inbound surface is the Public Gateway:
 
-The AAR ships consumer rules preserving serializable protocol types and AIDL stubs while allowing
-unused implementation code to be removed from consuming APKs.
+```text
+SHARE_TO_OMNI
+ASK_OMNI
+OPEN_OMNI
+```
+
+Hosts should map unknown-app requests to a **chat-only** runtime profile.
+
+A low-trust paired transport peer is hard-limited by the 1.4 transport policy to:
+
+```text
+chat.*
+search.*
+summarize.*
+translate.*
+extract.*
+```
+
+It cannot escape that ceiling through a wildcard ACL.
+
+## Desktop transport
+
+Default port:
+
+```text
+49371
+```
+
+Recommended layers:
+
+```text
+OmniTcpClient / OmniTcpServer
+          ↓
+SecureTransportSession
+          ↓
+OmniMultiplexedConnection
+          ↓
+OmniReliableClient   (optional long-lived client supervisor)
+```
+
+For full details, pairing rules, identity storage, ACL examples, ADB forwarding and lifecycle guidance,
+read [DESKTOP_TRANSPORT.md](DESKTOP_TRANSPORT.md).
 
 ## Compatibility
 
-Existing AIDL methods remain append-only and keep their original transaction IDs. SDK 1.3 intentionally
-keeps `CURRENT_PROTOCOL_VERSION = 4`; new protocol models are additive/opt-in and runtime feature flags
-stay false until a consumer actually implements them.
+Android Binder protocol remains:
+
+```text
+CURRENT_PROTOCOL_VERSION = 4
+```
+
+Version 1.4 does not reorder existing AIDL methods.
+
+New protocol fields use conservative defaults and the canonical JSON codec ignores unknown additive
+fields.
+
+The desktop transport has its own transport protocol version and does not change the deployed Binder
+transaction ordering.
+
+## Verification
+
+CI validates:
+
+```text
+./gradlew build test
+./gradlew publishToMavenLocal
+```
+
+for the Android and JVM modules.
+
+## Documentation index
+
+- [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) — which integration to use, when and why.
+- [LINK_PROTOCOL.md](LINK_PROTOCOL.md) — canonical Binder/action/capability protocol rules.
+- [SIGNING_TRUST.md](SIGNING_TRUST.md) — first-party signing and trust.
+- [OMNILINK_TRUST_MESH.md](OMNILINK_TRUST_MESH.md) — trust/capability architecture.
+- [DESKTOP_TRANSPORT.md](DESKTOP_TRANSPORT.md) — encrypted Android/desktop transport.
+- [ARCHITECTURE_EVOLUTION.md](ARCHITECTURE_EVOLUTION.md) — implemented vs future work.
+- [00_INTEGRATION_ORDER.md](00_INTEGRATION_ORDER.md) — rollout order for a consumer ecosystem.
+- [01_OmniLinkSDK_PROMPT.md](01_OmniLinkSDK_PROMPT.md) — maintainer/agent release invariants.
+- [CHANGELOG.md](CHANGELOG.md) — version history.
+- [SECURITY.md](SECURITY.md) — vulnerability reporting and security invariants.
+- [REPOSITORY_HARDENING.md](REPOSITORY_HARDENING.md) — GitHub rulesets, Actions, secrets and access policy.
+- [LICENSE](LICENSE) — proprietary source-available terms.
+- [NOTICE.md](NOTICE.md) — copyright and ownership notice.

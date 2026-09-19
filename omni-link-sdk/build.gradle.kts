@@ -47,6 +47,7 @@ android {
 }
 
 dependencies {
+    api(project(":omni-link-transport"))
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
@@ -64,6 +65,33 @@ afterEvaluate {
                 artifactId = "omni-link-sdk"
                 version = omniLinkVersion
                 from(components["release"])
+
+                pom {
+                    name.set("OmniLinkSDK Android")
+                    description.set("Privileged Android IPC, trust, capability, and transport adapters for the Omni ecosystem.")
+                    url.set("https://github.com/obieda-hussien/OmniLinkSDK")
+
+                    licenses {
+                        license {
+                            name.set("Omni Reference Source License 1.0")
+                            url.set("https://github.com/obieda-hussien/OmniLinkSDK/blob/main/LICENSE")
+                            distribution.set("repo")
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id.set("obieda-hussien")
+                            name.set("Abdelrahman Hussein (عبدالرحمن حسين)")
+                        }
+                    }
+
+                    scm {
+                        url.set("https://github.com/obieda-hussien/OmniLinkSDK")
+                        connection.set("scm:git:https://github.com/obieda-hussien/OmniLinkSDK.git")
+                        developerConnection.set("scm:git:ssh://git@github.com/obieda-hussien/OmniLinkSDK.git")
+                    }
+                }
             }
         }
     }

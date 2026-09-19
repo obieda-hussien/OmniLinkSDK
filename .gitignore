@@ -14,3 +14,18 @@
 .cxx
 local.properties
 build/
+
+# Secrets / signing material
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+.env
+.env.*
+secrets/
+omni-ecosystem-keys/
+
+# Generated security/report artifacts
+*.sarif

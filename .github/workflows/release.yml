@@ -18,13 +18,35 @@ concurrency:
 jobs:
   tag-and-release:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@ed408507eac070d1f99cc633dbcf757c94c7933a
+
+      - name: Verify release source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF}" = "refs/heads/main" || {
+            echo "::error::Automated releases may only run from main."
+            exit 1
+          }
+          bash scripts/security_sanity.sh
+          bash scripts/verify_docs_version.sh
+          ./gradlew build test publishToMavenLocal --stacktrace
 
       - name: Resolve SDK version
         id: version
@@ -46,6 +68,15 @@ jobs:
           TAG: ${{ steps.version.outputs.tag }}
         shell: bash
         run: |
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            TAG_COMMIT="$(git rev-list -n 1 "$TAG")"
+            HEAD_COMMIT="$(git rev-parse HEAD)"
+            if [ "$TAG_COMMIT" != "$HEAD_COMMIT" ]; then
+              echo "::error::Tag $TAG already points to $TAG_COMMIT, not release HEAD $HEAD_COMMIT"
+              exit 1
+            fi
+          fi
+
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
@@ -86,5 +117,7 @@ jobs:
             echo "## OmniLinkSDK ${{ steps.version.outputs.tag }}"
             echo ""
             echo "Release existed before run: ${{ steps.exists.outputs.exists }}"
-            echo "JitPack coordinate: `com.github.obieda-hussien:OmniLinkSDK:${{ steps.version.outputs.tag }}`"
+            echo "JitPack aggregate: `com.github.obieda-hussien:OmniLinkSDK:${{ steps.version.outputs.tag }}`"
+            echo "Android module: `com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:${{ steps.version.outputs.tag }}`"
+            echo "JVM transport: `com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:${{ steps.version.outputs.tag }}`"
           } >> "$GITHUB_STEP_SUMMARY"
