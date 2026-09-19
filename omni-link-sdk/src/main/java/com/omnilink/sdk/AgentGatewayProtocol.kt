@@ -149,8 +149,7 @@ sealed interface AgentTaskEvent {
 data class AgentConversationQuery(
     val limit: Int = 50,
     val beforeUpdatedAt: Long? = null,
-    val search: String? = null,
-    val scopePath: String? = null
+    val search: String? = null
 )
 
 /** Query parameters for reading one conversation page. */
