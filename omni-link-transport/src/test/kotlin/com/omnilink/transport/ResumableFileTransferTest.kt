@@ -90,7 +90,7 @@ class ResumableFileTransferTest {
         ).sendFile(source, manifest)
 
         assertTrue(result.accepted)
-        val stored = requireNotNull(result.storedPath).let(::java.io.File)
+        val stored = requireNotNull(result.storedPath).let { java.io.File(it) }
         assertArrayEquals(bytes, stored.readBytes())
 
         client.close()
