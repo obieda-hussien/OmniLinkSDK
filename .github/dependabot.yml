@@ -14,6 +14,25 @@ updates:
       - "obieda-hussien"
     commit-message:
       prefix: "deps"
+    # AGP 9 and Gradle 9 require a coordinated build-system migration.
+    # Do not let Dependabot upgrade either independently.
+    ignore:
+      - dependency-name: "com.android.library"
+        versions:
+          - ">= 9.0.0"
+      - dependency-name: "gradle-wrapper"
+        versions:
+          - ">= 9.0.0"
+      # Temporary: CodeQL bundle 2.27.0 rejects Kotlin 2.4.20 during extraction.
+      - dependency-name: "org.jetbrains.kotlin.android"
+        versions:
+          - "2.4.20"
+      - dependency-name: "org.jetbrains.kotlin.jvm"
+        versions:
+          - "2.4.20"
+      - dependency-name: "org.jetbrains.kotlin.plugin.serialization"
+        versions:
+          - "2.4.20"
     groups:
       kotlin-runtime:
         patterns:

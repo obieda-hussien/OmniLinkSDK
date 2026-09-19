@@ -29,3 +29,6 @@ omni-ecosystem-keys/
 
 # Generated security/report artifacts
 *.sarif
+
+# Kotlin Gradle plugin persistent project data
+.kotlin/

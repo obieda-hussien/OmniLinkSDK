@@ -68,20 +68,24 @@ jobs:
           TAG: ${{ steps.version.outputs.tag }}
         shell: bash
         run: |
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            TAG_COMMIT="$(git rev-list -n 1 "$TAG")"
-            HEAD_COMMIT="$(git rev-parse HEAD)"
-            if [ "$TAG_COMMIT" != "$HEAD_COMMIT" ]; then
-              echo "::error::Tag $TAG already points to $TAG_COMMIT, not release HEAD $HEAD_COMMIT"
-              exit 1
-            fi
-          fi
+          set -euo pipefail
 
+          # Ordinary maintenance may update release.yml while the source version is unchanged.
+          # An already-published release is therefore a clean no-op, not an error.
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Release $TAG already exists; skipping tag/release creation."
+            exit 0
           fi
+
+          # A tag without a matching GitHub release is ambiguous and must be resolved manually.
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            TAG_COMMIT="$(git rev-list -n 1 "$TAG")"
+            echo "::error::Tag $TAG already exists at $TAG_COMMIT but no GitHub release exists."
+            exit 1
+          fi
+
+          echo "exists=false" >> "$GITHUB_OUTPUT"
 
       - name: Create version tag
         if: steps.exists.outputs.exists != 'true'
