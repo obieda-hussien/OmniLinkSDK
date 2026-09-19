@@ -12,7 +12,7 @@ or shipping derivative builds of this source is not permitted except for the lim
 rights that apply to public repositories. See [LICENSE](LICENSE), [NOTICE.md](NOTICE.md), and
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Version **1.4.1** supports two distinct integration domains:
+Version **1.4.2** supports two distinct integration domains:
 
 - same-device Android IPC for first-party Omni apps through Binder/AIDL;
 - authenticated encrypted Android/desktop transport over TCP, LAN, localhost or ADB tunnels.
@@ -23,7 +23,7 @@ surface.
 The version source of truth is:
 
 ```properties
-OMNILINK_VERSION=1.4.1
+OMNILINK_VERSION=1.4.2
 ```
 
 in `gradle.properties`.
@@ -106,7 +106,7 @@ dependencyResolutionManagement {
 ```kotlin
 dependencies {
     implementation(
-        "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v1.4.1"
+        "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v1.4.2"
     )
 }
 ```
@@ -116,7 +116,7 @@ dependencies {
 ```kotlin
 dependencies {
     implementation(
-        "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v1.4.1"
+        "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v1.4.2"
     )
 }
 ```
@@ -125,7 +125,7 @@ dependencies {
 
 ```kotlin
 dependencies {
-    implementation("com.github.obieda-hussien:OmniLinkSDK:v1.4.1")
+    implementation("com.github.obieda-hussien:OmniLinkSDK:v1.4.2")
 }
 ```
 
