@@ -10,7 +10,19 @@ The source version is defined once in `gradle.properties` as `OMNILINK_VERSION`.
 line is **1.3.0**; merging a new version to `main` automatically creates the matching `vX.Y.Z` tag and
 GitHub release.
 
-## 1.3 architecture
+## 1.4 desktop transport
+
+OmniLink now includes a pure JVM `omni-link-transport` module that can run on Android and desktop
+Java/Kotlin. It implements signed mutual authentication, ephemeral ECDH session agreement,
+AES-256-GCM encrypted messaging, replay protection, peer pinning and directional capability ACLs.
+
+Android uses an optional AndroidKeyStore-backed transport identity; desktop JVM identities can be
+stored in an encrypted file. Unknown peers are rejected by default and explicit pairing can place a
+peer into a chat-only sandbox.
+
+See [DESKTOP_TRANSPORT.md](DESKTOP_TRANSPORT.md) for the complete protocol/security model.
+
+## 1.3 trust architecture
 
 OmniLink 1.3 adds:
 
@@ -43,7 +55,7 @@ dependencyResolutionManagement {
 }
 
 dependencies {
-    implementation("com.github.obieda-hussien:OmniLinkSDK:v1.3.0")
+    implementation("com.github.obieda-hussien:OmniLinkSDK:v1.4.0")
 }
 ```
 
