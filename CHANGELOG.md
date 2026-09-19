@@ -10,7 +10,7 @@ The repository version is sourced from `OMNILINK_VERSION` in `gradle.properties`
 
 - Upgraded Android Gradle Plugin from 8.5.1 to 8.13.2.
 - Upgraded the Gradle distribution from 8.8 to 8.13 with the official SHA-256 checksum.
-- Upgraded Kotlin Android/JVM/serialization plugins from 2.0.0 to 2.4.20.
+- Upgraded Kotlin Android/JVM/serialization plugins from 2.0.0 to 2.4.10.
 - Upgraded kotlinx.serialization JSON from 1.7.0 to 1.11.0.
 - Upgraded kotlinx.coroutines core/Android/test from 1.8.1 to 1.11.0.
 - Upgraded Robolectric from 4.11.1 to 4.17.
@@ -31,6 +31,7 @@ The repository version is sourced from `OMNILINK_VERSION` in `gradle.properties`
 - This is a build/dependency patch release; OmniLink public APIs and AIDL transaction ordering are unchanged.
 - Android Binder protocol remains version 4.
 - The toolchain intentionally stays on AGP 8.x to avoid an implicit AGP 9 built-in-Kotlin migration.
+- Kotlin is temporarily pinned to 2.4.10 because the currently published CodeQL 2.27.0 bundle rejects 2.4.20 during extraction; normal builds on 2.4.20 were otherwise successful.
 
 ## 1.4.0
 
