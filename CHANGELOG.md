@@ -61,6 +61,19 @@ The repository version is sourced from `OMNILINK_VERSION` in `gradle.properties`
 - CI verifies `publishToMavenLocal` on pull requests.
 - Concurrency tests found and drove fixes for socket-reader dispatcher blocking and send-sequence wire-order inversion.
 
+### Repository security and ownership
+
+- Added proprietary Omni Reference Source License 1.0.
+- Added explicit copyright/ownership notice for Abdelrahman Hussein (عبدالرحمن حسين).
+- Added SECURITY.md and closed contribution policy.
+- Added CODEOWNERS assigning repository ownership to @obieda-hussien.
+- Added Dependabot monitoring for Gradle and GitHub Actions.
+- Added CodeQL and dependency-review security workflows.
+- Pinned GitHub Actions to immutable commit SHAs.
+- Reduced ordinary CI workflow token permissions to read-only.
+- Hardened release automation to rebuild/test/publish-verify before tagging.
+- Added repository-hardening guidance for main/tag rulesets, secret scanning and access review.
+
 ### Documentation
 
 - Added `INTEGRATION_GUIDE.md`.
