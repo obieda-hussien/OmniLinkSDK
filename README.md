@@ -1,50 +1,102 @@
 # OmniLinkSDK
+
 [![](https://jitpack.io/v/obieda-hussien/OmniLinkSDK.svg)](https://jitpack.io/#obieda-hussien/OmniLinkSDK)
 
-This is now its own GitHub repo, not a folder copied between projects. Every satellite app (and Workspace itself) consumes it via JitPack + a version tag. Fed to the agent first, before any of the other five repos.
+OmniLinkSDK is the shared protocol, trust and IPC substrate for the Omni ecosystem. It lets first-party
+apps expose capabilities to Omni, lets trusted first-party clients embed the Workspace agent, and keeps
+foreign-app interoperability isolated from privileged Binder surfaces.
 
-*   **Latest Release:** [v1.1.0](https://github.com/obieda-hussien/OmniLinkSDK/releases/tag/v1.1.0)
-*   **JitPack Artifacts:** [obieda-hussien/OmniLinkSDK](https://jitpack.io/#obieda-hussien/OmniLinkSDK)
+The source version is defined once in `gradle.properties` as `OMNILINK_VERSION`. The current source
+line is **1.3.0**; merging a new version to `main` automatically creates the matching `vX.Y.Z` tag and
+GitHub release.
 
-## R8 Minification & Shrinking
-This SDK is optimized out-of-the-box. It ships with `consumer-rules.pro` to ensure that consumer apps leveraging R8 shrinking will safely preserve the SDK's AIDL stubs and `@Serializable` JSON models while stripping out unused code, significantly reducing the final APK size of the consumer apps without breaking reflection-based JSON parsing.
+## 1.3 architecture
 
-## Consumption instructions
+OmniLink 1.3 adds:
 
-To consume this library in your Android project:
+- fail-closed same-signer authentication by default,
+- Binder UID/package/certificate identity resolution,
+- CORE / FIRST_PARTY / TRUSTED_PARTNER / UNTRUSTED trust tiers,
+- per-capability trust, direction, risk, data scope, idempotency and schema metadata,
+- bounded async concurrency, deadline/size checks and service-scope cancellation,
+- canonical forward-compatible JSON handling,
+- bounded event buffering plus sequence/replay primitives,
+- transport-independent multiplexed session frames,
+- payload transport negotiation models,
+- capability graph + agent task DAG models,
+- preview -> commit models for destructive operations,
+- one-way foreign-app bridge descriptors,
+- a separate narrow public share/ask/open request contract.
+
+See [OMNILINK_TRUST_MESH.md](OMNILINK_TRUST_MESH.md) for the architecture and staged integration plan.
+See [SIGNING_TRUST.md](SIGNING_TRUST.md) for the shared Omni signing-key model.
+
+## Consumption
+
+After the corresponding release tag exists:
 
 ```kotlin
-// settings.gradle.kts (consumer)
 dependencyResolutionManagement {
     repositories {
         maven { url = uri("https://jitpack.io") }
     }
 }
 
-// app/build.gradle.kts (consumer)
 dependencies {
-    implementation("com.github.obieda-hussien:OmniLinkSDK:v1.1.0")
+    implementation("com.github.obieda-hussien:OmniLinkSDK:v1.3.0")
 }
 ```
 
-Bumping the SDK means: make the change here, tag a new version, then bump the version string in each of the four consumer `build.gradle.kts` files — a visible, reviewable diff instead of a silent copy-paste that's easy to forget.
+JitPack remains the low-friction distribution path. The publication metadata and runtime SDK version
+both derive from `OMNILINK_VERSION`; they can no longer silently drift.
 
-**Migration note:** JitPack is the current, low-friction way to consume this repo, not the permanent architecture. It builds on demand from GitHub at resolution time, which means occasional slow or failed builds and a dependency on JitPack's own infrastructure staying healthy — acceptable for now, not ideal for something this central once the ecosystem is load-bearing. The concrete long-term target is **GitHub Packages** (not Maven Central — Maven Central's release ceremony, Sonatype account, and GPG signing exist for public library distribution, which this isn't): GitHub Packages publishes directly from the same Actions workflow already built in Phase 5, with no third-party build-on-demand step in between. Migrate once the ecosystem stabilizes; don't block current progress on it.
+## Privileged extension surface
 
+Extensions expose app-owned capabilities through `IExtensionService` / `ExtensionService`.
+
+The default security validator is now:
+
+```kotlin
+SameSignerSecurityValidator()
+```
+
+so privileged calls fail closed unless the Binder caller shares the host's Android signing identity.
+Authentication is still followed by trust/capability policy and the extension's `AccessController`.
+
+Heavy work belongs on `executeActionAsync` or a JOB capability. A declared non-`IMMEDIATE`
+capability is rejected from the synchronous path.
 
 ## Embedded Omni Agent Gateway
 
-OmniLink now supports **bidirectional** integration. Extensions expose capabilities to Workspace through
-`IExtensionService`, while trusted same-signer applications can embed the full Omni agent through
-`IAgentGatewayService`.
+Trusted first-party applications can delegate work to Workspace through `IAgentGatewayService`.
+Workspace remains the owner of model/runtime state, MCP, web/deep search, local tools, memory, project
+context, history and Agent Console events.
 
-The gateway is intended for IDEs and first-party companion apps that need the real Workspace runtime:
-MCP servers, web/deep search, local tools, memory, project context and the Agent Console all remain owned
-by Workspace. Clients send typed `AgentTaskRequest` objects and receive ordered `AgentTaskEvent` events.
+Clients send typed `AgentTaskRequest` values and receive ordered `AgentTaskEvent` events. History
+and replay APIs are append-only and preserve deployed Binder transaction IDs.
 
-Security is enforced with the signature-level
-`com.omnilink.sdk.permission.BIND_AGENT` permission. Clients must never spoof their package name in the
-payload; Workspace resolves Binder UID/package identity itself.
+The gateway stays protected by the signature-level
+`com.omnilink.sdk.permission.BIND_AGENT` permission. Request payload package names are never trusted;
+the host resolves identity from Binder.
 
-Long-running work is task based. A client starts a task, receives a task id + Workspace history session,
-streams status/console/tool/final events, and may cancel or query the latest snapshot after reconnecting.
+## Foreign applications
+
+A foreign app is not allowed into `BIND_AGENT` / `BIND_EXTENSION`.
+
+Omni may interact outward through adapters such as public APIs, Intents, MediaSession, notification
+actions, Accessibility, Shizuku/shell or root, choosing the lowest-privilege semantic adapter first.
+
+If Workspace wants useful inbound third-party interoperability, it can expose the separate
+`ACTION_PUBLIC_OMNI_REQUEST` Intent for narrowly scoped share/ask/open requests. That public path does
+not weaken the privileged agent gateway.
+
+## R8
+
+The AAR ships consumer rules preserving serializable protocol types and AIDL stubs while allowing
+unused implementation code to be removed from consuming APKs.
+
+## Compatibility
+
+Existing AIDL methods remain append-only and keep their original transaction IDs. SDK 1.3 intentionally
+keeps `CURRENT_PROTOCOL_VERSION = 4`; new protocol models are additive/opt-in and runtime feature flags
+stay false until a consumer actually implements them.

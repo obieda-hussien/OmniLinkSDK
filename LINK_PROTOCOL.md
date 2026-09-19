@@ -1,76 +1,228 @@
 # OmniLink Protocol
 
-## Action Naming
-Satellite apps must never define their own action starting with `_`. The `_` prefix is reserved for protocol-level system calls (e.g. the heartbeat tick, `_tick`). This keeps a clean namespace between "the protocol talking to itself" and "the agent calling app-specific capabilities," with no new AIDL method required to add future system-level calls.
+## Core rule
 
-## OS-Level Security & Constants
-The SDK defines the following constants in `OmniLinkConstants` which should be used by both Workspace and satellite extensions:
-- `OmniLinkConstants.PERMISSION_BIND_EXTENSION` (`com.omnilink.sdk.permission.BIND_EXTENSION`): A `signature` level permission. Android will reject any `bindService()` call if the caller does not hold this permission and isn't signed with the same key. The SDK merges this automatically into consumer manifests.
-- `OmniLinkConstants.ACTION_EXTENSION_BIND` (`com.omnilink.sdk.action.EXTENSION_BIND`): The intent action used to discover and bind extensions.
+OmniLink separates identity, authority and consent:
 
-**Note:** The OS-level permission is the primary defense, but a `SecurityValidator` (specifically `SignatureSecurityValidator`) is a required second layer of defense, not optional. Every consumer's `ExtensionService` subclass must set a real `SecurityValidator` to protect against package spoofing on rooted devices. Do not leave it as `null`.
+> Certificate establishes identity. Capabilities establish authority. The user establishes consent.
 
-## Execution: Sync vs. Async
-**`executeAction` is reserved for actions a consumer explicitly documents as fast/non-blocking in its own manifest; anything else must be called via `executeActionAsync`.**
+A same-signer application is trusted as first-party identity, but it does not automatically receive
+every capability or every piece of app-owned data.
 
-- `executeAction` is a synchronous AIDL method. It blocks the caller's thread and occupies one of the callee's finite binder-pool threads for the duration of the execution. This is risky for network, DB, or file I/O operations and can lead to thread exhaustion or ANRs.
-- `executeActionAsync` is a `oneway` AIDL method that returns immediately and streams the outcome back via `IOmniResultCallback`. All standard heavy processing must use this path.
+## Shared first-party signing identity
 
-## The `requiresConfirmation` Flow
-The protocol handles operations requiring explicit user confirmation in a strictly defined way.
+All first-party Omni APKs should be signed by the same release certificate, and all development builds
+should use the same Omni debug certificate. See `SIGNING_TRUST.md`.
 
-- **Primary mechanism (Client-side):** The caller (Workspace) checks `CapabilityDescriptor.requiresConfirmation` from the extension's *cached manifest* **before** making the call. If true, the caller is responsible for displaying the confirmation UI and only executing the action if the user approves.
-- **Server-side Fallback (Not a retry protocol):** If a remote extension's `AccessController` returns `AccessDecision.REQUIRES_CONFIRMATION` (e.g., due to a stale cache or dynamic runtime policy), the caller receives `ActionOutcome.RequiresConfirmation(...)`. The caller must treat this as a **hard abort** and surface the failure to the agent/user. The caller must **never** silently retry the call assuming implicit confirmation.
+The SDK declares these signature-level permissions:
 
-## Launcher Interface
-The SDK repo defines the `IOmniLauncherInterface` AIDL as the single source of truth for the launcher IPC contract. However, the Omni-launcher repo does **not** take a direct dependency on this SDK. Instead, it copies the `.aidl` file text directly. The actual implementation (the Service and Binder stub) lives exclusively in the Omni-launcher repo, mapping these calls to Lawnchair/Launcher3 internals.
+- `OmniLinkConstants.PERMISSION_BIND_EXTENSION`
+  (`com.omnilink.sdk.permission.BIND_EXTENSION`)
+- `OmniLinkConstants.PERMISSION_BIND_AGENT`
+  (`com.omnilink.sdk.permission.BIND_AGENT`)
 
-## Binder Transaction Size Limits
-The shared Binder transaction buffer is a fixed ~1MB per process (covering all in-flight calls on the thread pool, not just the current one). Any capability that could return an unbounded list — a broad photo search, a large notes collection, a long price-history query — risks throwing `TransactionTooLargeException` and crashing the caller/service if it exceeds this threshold.
+Android checks signature permissions before application Binder code runs.
 
-**Rule:** Every capability returning a list must either paginate (using a `limit`/`cursor`-style parameter) or hard-cap the result size defensively inside `onAction()`. They must never return an unbounded collection and hope it stays small in practice. If a result set exceeds reasonable limits, it should be capped, and the outcome should be cleanly handled (e.g., returning a capped list with a flag indicating truncation, or failing cleanly with a documented error code like `result_too_large`).
+The base `ExtensionService` is also fail-closed with `SameSignerSecurityValidator`. Consumers do not
+need to paste a first-party certificate hash into every app. Explicit
+`SignatureSecurityValidator` allowlists remain available for controlled partner access or key
+migration.
 
-## Handling Remote Exceptions and Process Deaths
-When making remote IPC calls across process boundaries, the target process/extension can crash, get killed by the Android OS low-memory killer (LMK), or die mid-call.
+## Binder identity
 
-In such cases, the live call fails via an exception thrown directly out of the AIDL call itself (such as `DeadObjectException` or `RemoteException`). This is a completely separate failure path from the `onServiceDisconnected` callback.
+Caller identity must come from `Binder.getCallingUid()`, never a package name supplied inside JSON.
 
-**Rule:** Every remote call site must catch `RemoteException` and route the failure into the same reconnect-with-backoff path, rather than relying solely on the `onServiceDisconnected` callback firing separately. This ensures consistent recovery across all failure scenarios.
+`CallerIdentityResolver` records:
 
-## Security: Data as Untrusted Input
-The rule that external content is data, not commands, must be generalized beyond webpage scraping. The payment vault already treats webpage content the caller reads as untrusted data that the agent may reason about but must never obey as instructions.
+- calling UID,
+- every package associated with that UID,
+- signing certificate SHA-256 values,
+- whether the caller matches the host signing identity.
 
-**Rule:** Any data returned by any extension — including a note's body, a photo's metadata, a calendar event description, or an event payload — must be treated as untrusted data. Any of these sources could contain crafted text attempting an indirect prompt injection to redirect the agent's next action. Callers/Consumers must ensure that such returned data is only treated as data to be processed, and never treated as commands or instruction sources for the LLM agent.
+The old `getPackagesForUid(uid).firstOrNull()` pattern is not sufficient as an authorization
+primitive because one UID may map to more than one package.
 
+## Trust tiers
 
-## Agent Gateway (application → Workspace)
+`DefaultTrustResolver` maps authenticated callers into:
 
-Trusted applications can chat with and delegate work to Omni without embedding another model runtime.
-The canonical discovery action is `OmniLinkConstants.ACTION_AGENT_GATEWAY_BIND` and the service is guarded
-by `OmniLinkConstants.PERMISSION_BIND_AGENT` (signature-level).
+- `CORE`: same signer plus an explicitly configured core package.
+- `FIRST_PARTY`: same Omni signer.
+- `TRUSTED_PARTNER`: explicitly allowlisted external signer with an explicit capability allowlist.
+- `UNTRUSTED`: everything else.
 
-### Persistence contract
+A privileged extension should normally reject untrusted callers before capability execution.
 
-Every external task is a real Workspace conversation. Workspace owns the history row and persists:
-- source application package and display name,
-- stable client conversation id,
-- topic/title,
-- user and assistant messages,
-- structured external context,
-- Agent Console/tool execution entries,
-- completion/error state.
+## Capability authorization
 
-A reconnecting client must reuse `clientConversationId` when it wants to continue the same conversation.
+`CapabilityDescriptor` can declare:
 
-### Context is data, not authority
+- `requiredTrustTier`
+- `communicationDirection`
+- `risk`
+- `idempotency`
+- `supportsDryRun`
+- `timeoutMillis`
+- `maxInlinePayloadBytes`
+- `dataScopes`
+- `requiredPermissions`
+- `inputSchema` / `outputSchema`
 
-`AgentTaskRequest.context` may contain active-file text, diagnostics, Gradle output, project metadata,
-selection/cursor data, or other application state. Workspace treats this as untrusted context. It can inform
-reasoning but never overrides the system prompt, safety policy, tool policy, or confirmation policy.
+Authentication does not replace `AccessController`. The flow is:
 
-### IDE/job rule
+```text
+Binder UID
+  -> signing identity
+  -> trust tier
+  -> capability trust/direction check
+  -> AccessController
+  -> confirmation policy
+  -> execution
+```
 
-Builds, tests, lint, indexing and other long-running IDE operations are modeled as extension capabilities
-with `CapabilityExecutionMode.JOB`. The action returns a job id quickly; progress and completion are emitted
-as extension events or fetched by cursor. Large logs are paginated/chunked and never returned as one Binder
-payload.
+## Action naming
+
+Satellite apps must never define their own action starting with `_`. The prefix is reserved for
+protocol-level/system actions such as `_tick`.
+
+## Sync vs async execution
+
+`executeAction` is reserved for declared `CapabilityExecutionMode.IMMEDIATE` work.
+
+Anything touching disk, databases, the network, long computation or external processes belongs on
+`executeActionAsync` or a `JOB` capability.
+
+When a service has an explicit capability manifest, OmniLink 1.3 rejects a synchronous call to a
+non-`IMMEDIATE` capability with `async_required`.
+
+Legacy services with an empty capability list remain source-compatible.
+
+## Request reliability metadata
+
+`ActionRequest` can carry:
+
+- request ID,
+- correlation ID,
+- idempotency key,
+- deadline,
+- priority,
+- dry-run request,
+- confirmation token,
+- structured metadata.
+
+The base service rejects already-expired calls and oversized inline JSON before running app logic.
+
+## Confirmation
+
+`CapabilityDescriptor.requiresConfirmation` remains the fast client-side hint.
+
+A server-side `ActionOutcome.RequiresConfirmation` is a hard stop, not an implicit retry protocol.
+
+For destructive operations that need a stronger contract, SDK 1.3 also defines:
+
+- `ActionPreview`
+- `PreparedAction`
+- `ActionCommit`
+
+The host may prepare the exact side effect, show affected resources/diff/risk, then issue a short-lived
+opaque commit token after user approval.
+
+Same signer is never user consent.
+
+## Binder transaction limits
+
+Binder's transaction buffer is limited and shared across in-flight transactions. OmniLink therefore
+keeps a defensive inline JSON limit (`DEFAULT_MAX_INLINE_JSON_BYTES`) and requires pagination,
+chunking or JOB semantics for unbounded result sets.
+
+`SessionProtocol.kt` models future negotiated large-payload transports:
+
+- inline,
+- file descriptor,
+- pipe,
+- shared memory,
+- content URI.
+
+Actual FD/SharedMemory AIDL methods should only be appended once both endpoints implement them end to
+end.
+
+## Event flow
+
+`observeEvents()` wraps raw AIDL callbacks as Kotlin `Flow<OmniEvent>`.
+
+SDK 1.3 bounds the local client queue. Events that require lossless replay should carry monotonically
+increasing `sequence` values; consumers can detect gaps and use the owning replay/job API.
+
+The session protocol additionally models ACK/credit frames for future true cross-process backpressure.
+
+## Process death and reconnect
+
+Every remote Binder call site must treat `RemoteException` / `DeadObjectException` as an immediate
+connection failure and route it into the same reconnect-with-backoff path as
+`onServiceDisconnected`.
+
+Long-running work should be represented by durable task/job IDs so callers can reconnect and query or
+replay state instead of assuming one Binder connection lives forever.
+
+## Data is untrusted input
+
+Anything returned by an extension is data, not instruction authority:
+
+- note bodies,
+- calendar descriptions,
+- file contents,
+- webpage text,
+- diagnostics,
+- build output,
+- event payloads.
+
+Agent prompts and tool policy must not treat extension-provided text as higher-priority instructions.
+
+## Agent Gateway
+
+Trusted same-signer apps can delegate work to Workspace through `IAgentGatewayService`.
+
+Workspace owns:
+
+- model/runtime state,
+- MCP,
+- web/deep search,
+- local tools,
+- memory,
+- project context,
+- persistent history,
+- Agent Console,
+- task state.
+
+A client reuses `clientConversationId` when continuing the same logical conversation.
+
+SDK 1.3 adds task graph/delegation models but the corresponding
+`AgentGatewayManifest.supportsTaskGraphs` flag defaults to `false` until Workspace really supports
+it.
+
+## Foreign applications
+
+Foreign apps must not receive privileged `BIND_AGENT` or `BIND_EXTENSION` access.
+
+Omni can control/interact outward through the External App Bridge using the lowest-privilege semantic
+adapter available:
+
+1. native public API,
+2. Intent/deep link,
+3. MediaSession,
+4. notification action,
+5. Accessibility,
+6. Shizuku/shell,
+7. root if explicitly granted by the user.
+
+For intentional inbound interoperability, Workspace may expose the separate
+`ACTION_PUBLIC_OMNI_REQUEST` Intent. It is a narrow share/ask/open surface with its own size limits,
+sanitization and confirmation policy. It does not weaken the privileged Agent Gateway.
+
+## Compatibility
+
+Existing AIDL method order is append-only and Binder transaction IDs must never be reordered.
+
+SDK 1.3 keeps `CURRENT_PROTOCOL_VERSION = 4`. New models are additive/opt-in. `OmniJson` omits
+default fields and upgraded peers ignore unknown fields, while runtime feature flags stay false until a
+consumer implements the feature.

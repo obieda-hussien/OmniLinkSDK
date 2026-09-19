@@ -2,65 +2,137 @@ package com.omnilink.sdk
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Binder
 import android.os.Build
+import android.os.Process
 import java.security.MessageDigest
 
 interface SecurityValidator {
     /**
-     * Validates if the caller is authorized to bind and call this extension.
-     * Return true if valid, false to immediately reject with an access_denied error.
+     * Validates whether the Binder caller may enter this privileged OmniLink surface.
+     * Capability-level authorization still happens separately.
      */
     fun isCallerAuthorized(context: Context, caller: CallerContext): Boolean
 }
 
 /**
- * A basic validator that only checks package names, suitable for testing or development.
- * Note: Not safe against package spoofing on rooted devices.
+ * Development/testing validator. Package names alone are not an authentication mechanism.
  */
 class BasicPackageValidator(private val allowedPackages: Set<String>) : SecurityValidator {
     override fun isCallerAuthorized(context: Context, caller: CallerContext): Boolean {
-        return allowedPackages.contains(caller.callingPackage)
+        val packages = caller.callingPackages.ifEmpty { listOf(caller.callingPackage) }
+        return packages.any(allowedPackages::contains)
     }
 }
 
 /**
- * A robust validator that computes the SHA-256 hash of the caller's APK signing certificate
- * and verifies it against an authorized set of hashes.
+ * Secure first-party default: only callers signed by the same certificate as the host app pass.
+ *
+ * Same UID is accepted because it is already the same Android security principal. Otherwise
+ * PackageManager performs the platform signing-certificate comparison.
+ */
+class SameSignerSecurityValidator : SecurityValidator {
+    override fun isCallerAuthorized(context: Context, caller: CallerContext): Boolean {
+        if (caller.callingUid == Process.myUid()) return true
+        return context.packageManager.checkSignatures(caller.callingUid, Process.myUid()) ==
+            PackageManager.SIGNATURE_MATCH
+    }
+}
+
+/**
+ * Explicit certificate allowlist for trusted partners or signing-key migration.
+ *
+ * SHA-256 values may contain ':' separators and are normalized internally. On Android P+ the full
+ * signing certificate history is considered for single-signer packages, so legitimate key rotation
+ * can be represented without weakening package identity.
  */
 class SignatureSecurityValidator(
-    private val allowedSignatureHashes: Set<String>
+    allowedSignatureHashes: Set<String>
 ) : SecurityValidator {
+    private val allowed = allowedSignatureHashes.map(::normalizeCertificateHash).toSet()
 
     override fun isCallerAuthorized(context: Context, caller: CallerContext): Boolean {
-        try {
-            val pm = context.packageManager
+        val known = caller.signingCertificateSha256
+            .map(::normalizeCertificateHash)
+            .ifEmpty {
+                caller.callingPackages
+                    .ifEmpty { listOf(caller.callingPackage) }
+                    .flatMap { SigningCertificateUtils.sha256ForPackage(context, it) }
+            }
+        return known.any(allowed::contains)
+    }
+}
 
-            // Get signatures based on Android version
+class AnyOfSecurityValidator(
+    private vararg val validators: SecurityValidator
+) : SecurityValidator {
+    override fun isCallerAuthorized(context: Context, caller: CallerContext): Boolean =
+        validators.any { it.isCallerAuthorized(context, caller) }
+}
+
+class AllOfSecurityValidator(
+    private vararg val validators: SecurityValidator
+) : SecurityValidator {
+    override fun isCallerAuthorized(context: Context, caller: CallerContext): Boolean =
+        validators.all { it.isCallerAuthorized(context, caller) }
+}
+
+/**
+ * Resolves Binder identity from the UID supplied by the kernel. Package names from request payloads
+ * are never trusted.
+ */
+object CallerIdentityResolver {
+    fun resolve(context: Context, callingUid: Int = Binder.getCallingUid()): CallerContext {
+        val packageManager = context.packageManager
+        val packages = packageManager.getPackagesForUid(callingUid)
+            ?.toList()
+            ?.sorted()
+            .orEmpty()
+
+        val certificateHashes = packages
+            .flatMap { SigningCertificateUtils.sha256ForPackage(context, it) }
+            .map(::normalizeCertificateHash)
+            .distinct()
+            .sorted()
+
+        val sameSigner = callingUid == Process.myUid() ||
+            packageManager.checkSignatures(callingUid, Process.myUid()) ==
+            PackageManager.SIGNATURE_MATCH
+
+        return CallerContext(
+            callingUid = callingUid,
+            callingPackage = packages.firstOrNull() ?: "uid:$callingUid",
+            callingPackages = packages,
+            signingCertificateSha256 = certificateHashes,
+            sameSignerAsHost = sameSigner
+        )
+    }
+}
+
+internal object SigningCertificateUtils {
+    fun sha256ForPackage(context: Context, packageName: String): List<String> {
+        return try {
+            val pm = context.packageManager
             val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                val info = pm.getPackageInfo(caller.callingPackage, PackageManager.GET_SIGNING_CERTIFICATES)
-                info.signingInfo?.apkContentsSigners
+                val info = pm.getPackageInfo(packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+                val signingInfo = info.signingInfo ?: return emptyList()
+                if (signingInfo.hasMultipleSigners()) {
+                    signingInfo.apkContentsSigners
+                } else {
+                    signingInfo.signingCertificateHistory
+                }
             } else {
                 @Suppress("DEPRECATION")
-                val info = pm.getPackageInfo(caller.callingPackage, PackageManager.GET_SIGNATURES)
-                info.signatures
+                pm.getPackageInfo(packageName, PackageManager.GET_SIGNATURES).signatures
             }
 
-            if (signatures == null || signatures.isEmpty()) {
-                return false
-            }
-
-            val md = MessageDigest.getInstance("SHA-256")
-
-            for (signature in signatures) {
-                val digest = md.digest(signature.toByteArray())
-                val hashHex = digest.joinToString("") { "%02x".format(it) }
-                if (allowedSignatureHashes.contains(hashHex)) {
-                    return true
-                }
-            }
-            return false
-        } catch (e: Exception) {
-            return false
+            signatures.orEmpty().map { signature ->
+                val digest = MessageDigest.getInstance("SHA-256")
+                    .digest(signature.toByteArray())
+                digest.joinToString(separator = "") { byte -> "%02x".format(byte.toInt() and 0xff) }
+            }.distinct()
+        } catch (_: Exception) {
+            emptyList()
         }
     }
 }
