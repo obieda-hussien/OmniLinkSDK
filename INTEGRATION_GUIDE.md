@@ -539,6 +539,74 @@ ACLs.
 
 ---
 
+## 14.1 Public Gateway from a third-party app without the Android AAR
+
+An ordinary Android app does not need the first-party Omni Android SDK just to send a public request.
+
+The public action and extra are stable contract strings:
+
+```text
+Action: com.omnilink.sdk.action.PUBLIC_OMNI_REQUEST
+Extra:  com.omnilink.sdk.extra.PUBLIC_REQUEST_JSON
+```
+
+Example ASK request JSON:
+
+```json
+{
+  "kind": "ASK_OMNI",
+  "text": "Summarize this page for me",
+  "url": "https://example.com/article",
+  "clientRequestId": "client-123"
+}
+```
+
+Example Android caller:
+
+```kotlin
+val requestJson = """
+{
+  "kind": "ASK_OMNI",
+  "text": "Summarize this text",
+  "clientRequestId": "client-123"
+}
+""".trimIndent()
+
+val intent = Intent(
+    "com.omnilink.sdk.action.PUBLIC_OMNI_REQUEST"
+).apply {
+    // Prefer an explicit, user-selected/known Omni host package.
+    setPackage(omniHostPackage)
+    putExtra(
+        "com.omnilink.sdk.extra.PUBLIC_REQUEST_JSON",
+        requestJson
+    )
+}
+
+startActivity(intent)
+```
+
+The exact Android component that receives this Intent belongs to the Omni host application. OmniLink
+1.4 defines the contract; it does not auto-register a public Activity in every consumer.
+
+The receiving host must still apply the 32 KiB limit, parse defensively, sanitize external content and
+force unknown callers into its safe CHAT policy.
+
+## 14.2 Mode eligibility matrix
+
+| Caller class | CHAT | AGENT | TEAM | Notes |
+|---|---:|---:|---:|---|
+| Same-signer first-party Android app through privileged Agent Gateway | yes | host policy | host policy | Only if Workspace implements the requested mode |
+| CORE first-party app | yes | host policy | host policy | CORE still does not bypass confirmation |
+| Trusted partner through Public Gateway | yes | no by default | no | Public path is intentionally narrow |
+| Trusted partner through encrypted transport | capability-based | only if host explicitly exposes such a capability | only if host explicitly exposes such a capability | Never implied by TRUSTED_PARTNER alone |
+| Unknown third-party | yes, sandboxed | no | no | Public Gateway |
+| PAIRED network peer | yes, sandboxed | no | no | Hard transport ceiling |
+| Explicitly verified FIRST_PARTY desktop peer | capability-based | possible only through explicit ACL + host runtime | possible only through explicit ACL + host runtime | Network FIRST_PARTY is an explicit promotion |
+
+Do not map a request to AGENT or TEAM merely because the incoming JSON asks for that mode.
+
+
 # Part D — Desktop / PC integration
 
 ## 15. Which transport class should you use?
