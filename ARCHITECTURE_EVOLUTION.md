@@ -1,4 +1,4 @@
-# OmniLinkSDK Architecture Evolution
+# OmniLinkSDK Architecture Evolution\n\n## Implemented in 1.4\n\n### Real desktop/JVM transport\n\n- pure JVM `omni-link-transport` artifact,\n- TCP client and server,\n- ECDSA P-256 mutual signed handshake,\n- ephemeral ECDH P-256 key agreement,\n- HKDF-SHA256 session derivation,\n- independent AES-256-GCM keys per direction,\n- replay/out-of-order sequence enforcement,\n- capability-scoped inbound/outbound ACLs,\n- strict peer pinning and explicit pairing hooks,\n- chat-sandbox trust profile,\n- encrypted desktop identity persistence,\n- AndroidKeyStore identity adapter and Android peer trust persistence.\n
 
 This file tracks what is implemented in the 1.3 source line and what remains staged for later transport
 work.
