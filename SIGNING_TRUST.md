@@ -1,4 +1,4 @@
-# Omni Ecosystem Signing & Trust Model
+# OmniLink 1.4 — Signing & Trust Model
 
 ## Goal
 
@@ -104,7 +104,7 @@ one signing source, no copied plaintext passwords.
 
 ## Runtime trust
 
-OmniLink 1.3 is fail-closed by default:
+OmniLink 1.4 remains fail-closed by default:
 
 ```kotlin
 open val securityValidator: SecurityValidator = SameSignerSecurityValidator()
@@ -150,8 +150,17 @@ sanitized, and subject to user/policy confirmation.
 `SignatureSecurityValidator` supports an explicit SHA-256 allowlist and considers Android signing
 certificate history on Android P+, making it suitable for controlled key rotation and partner rules.
 
-Never distribute the Omni private signing key to a partner. Partners keep their own key and receive
-only the capabilities explicitly allowlisted for their certificate.
+Never distribute the Omni signing key to a partner. Partners keep their own signing identity and receive
+only explicitly approved capabilities.
+
+A differently-signed partner should normally use the Public Gateway or the pure
+`omni-link-transport` module. The full Android AAR is first-party-oriented because its manifest
+declares Omni signature permissions. Application-level `TrustedPartnerRule` checks do not bypass
+Android's OS-level signature permission gate.
+
+If a future product deliberately needs differently-signed Binder partners, design a separate partner
+permission surface (for example, an explicit known-signer strategy where appropriate) rather than
+weakening the first-party permission.
 
 ## Migration warning
 
@@ -161,3 +170,48 @@ require uninstall/reinstall in development unless a supported signing-key upgrad
 
 Back up the release key and credentials outside the development phone. Losing the release signing key
 can prevent normal updates to installed builds that depend on it.
+
+
+## Android signer vs network transport identity
+
+The APK signing identity and the 1.4 network transport identity are deliberately different.
+
+The running Android app does not normally possess the developer's APK signing private key, so a PC
+cannot authenticate the phone by asking it to sign a network challenge with that release key.
+
+Instead, OmniLink 1.4 uses a long-lived transport signing key:
+
+- Android: `AndroidKeystoreSigningIdentity`
+- Desktop/JVM: `JvmEcSigningIdentity`
+- Desktop persistence: `EncryptedJvmIdentityStore`
+
+Android also includes the locally observed APK signer fingerprint inside the signed transport
+handshake metadata. That is useful policy/continuity metadata, but the network cryptographic identity
+is the pinned transport public key.
+
+## Network pairing and trust
+
+Unknown network peers are rejected by default.
+
+A safe promotion path is:
+
+```text
+unknown
+-> verify pairing code / fingerprint
+-> PAIRED chat sandbox
+-> verify device ownership/purpose
+-> explicit TRUSTED_PARTNER or FIRST_PARTY record
+-> exact inbound/outbound capability ACLs
+```
+
+The PAIRED tier has a hard 1.4 ceiling for chat/search/summarize/translate/extract namespaces plus
+reserved transport health controls. A wildcard ACL cannot override that ceiling.
+
+Revoking a PC/partner transport peer only requires removing its peer trust record. It does not require
+rotating the whole Omni APK signing key.
+
+## Integration references
+
+- [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)
+- [DESKTOP_TRANSPORT.md](DESKTOP_TRANSPORT.md)
+- [LINK_PROTOCOL.md](LINK_PROTOCOL.md)
