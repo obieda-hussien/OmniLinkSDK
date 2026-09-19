@@ -4,6 +4,33 @@ All notable OmniLinkSDK changes are documented here.
 
 The repository version is sourced from `OMNILINK_VERSION` in `gradle.properties`.
 
+## 2.0.0
+
+### Security architecture
+
+- Added the dedicated `omni-link-public` artifact for bounded third-party Ask/Share/Open integration.
+- Added host-side trusted provider verification before privileged Android service binding.
+- Removed wildcard defaults from FIRST_PARTY network trust profiles.
+- Android FIRST_PARTY promotion now requires host-owned expected signer fingerprints.
+- Trusted desktop promotion now requires a pinned long-lived transport public key and explicit
+  directional ACLs.
+- Bumped encrypted transport protocol to v2 and the Android negotiated protocol/session contract to
+  5/2 while preserving deployed AIDL method ordering.
+
+### Large payload data plane
+
+- Added incremental Android Content URI/file-descriptor payload support.
+- Added resumable encrypted file transfer over ACL-controlled `_transfer.*` capabilities.
+- Added durable partial files, resume offsets, bounded chunks, per-chunk hashes and final SHA-256
+  verification.
+- Large payloads no longer need to fit in one Binder transaction or one in-memory transport frame.
+
+### Compatibility
+
+- 2.0 is a major trust/distribution boundary release.
+- Existing AIDL transaction ordering remains intact and version negotiation remains explicit.
+- Third-party Android integrations should migrate to `omni-link-public`.
+
 ## 1.4.2
 
 ### Build and supply-chain maintenance
