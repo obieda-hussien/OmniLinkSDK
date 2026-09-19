@@ -5,6 +5,8 @@ plugins {
     id("maven-publish")
 }
 
+val omniLinkVersion = providers.gradleProperty("OMNILINK_VERSION").get()
+
 android {
     namespace = "com.omnilink.sdk"
     compileSdk = 36
@@ -12,6 +14,7 @@ android {
     defaultConfig {
         minSdk = 21
         consumerProguardFiles("consumer-rules.pro")
+        buildConfigField("String", "OMNILINK_SDK_VERSION", "\"$omniLinkVersion\"")
     }
 
     buildTypes {
@@ -32,6 +35,7 @@ android {
 
     buildFeatures {
         aidl = true
+        buildConfig = true
     }
 
     publishing {
@@ -58,7 +62,7 @@ afterEvaluate {
             register<MavenPublication>("release") {
                 groupId = "com.omnilink.sdk"
                 artifactId = "omni-link-sdk"
-                version = "1.0.0"
+                version = omniLinkVersion
                 from(components["release"])
             }
         }
