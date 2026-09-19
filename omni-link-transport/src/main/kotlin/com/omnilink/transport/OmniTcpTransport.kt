@@ -210,6 +210,20 @@ private fun performClientHandshake(
             finished.rejectionMessage ?: "Server rejected client proof"
         )
     }
+    val confirmation = finished.confirmationSignatureHex
+        ?: throw PeerAuthenticationException("Server omitted key confirmation")
+    val confirmationBytes = TransportCrypto.serverConfirmationBytes(
+        proofTranscript,
+        clientProof.signatureHex.hexToBytes()
+    )
+    if (!verifySignature(
+            serverIdentityKey,
+            confirmationBytes,
+            confirmation.hexToBytes()
+        )
+    ) {
+        throw PeerAuthenticationException("Server key confirmation signature is invalid")
+    }
 
     val keys = TransportCrypto.deriveSessionKeys(
         localEphemeral = ephemeral,
@@ -352,7 +366,19 @@ private fun performServerHandshake(
     }
     val clientTrust = clientTrustResolution.record
 
-    writeHandshakeFrame(output, encode(HandshakeFinished(accepted = true)))
+    val confirmationBytes = TransportCrypto.serverConfirmationBytes(
+        proofTranscript,
+        proof.signatureHex.hexToBytes()
+    )
+    writeHandshakeFrame(
+        output,
+        encode(
+            HandshakeFinished(
+                accepted = true,
+                confirmationSignatureHex = identity.sign(confirmationBytes).toHex()
+            )
+        )
+    )
 
     val keys = TransportCrypto.deriveSessionKeys(
         localEphemeral = ephemeral,
