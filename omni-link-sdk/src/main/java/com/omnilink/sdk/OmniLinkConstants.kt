@@ -9,7 +9,7 @@ object OmniLinkConstants {
     val SDK_VERSION: String = BuildConfig.OMNILINK_SDK_VERSION
 
     /**
-     * Existing JSON/Binder wire protocol remains v4 in 1.4.0. Trust/session/transport additions are
+     * Existing JSON/Binder wire protocol remains v4 across the 1.4.x release line. Trust/session/transport additions are
      * additive and opt-in; bump this only when a deployed wire contract requires negotiation.
      */
     const val CURRENT_PROTOCOL_VERSION = 4
