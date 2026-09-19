@@ -46,6 +46,7 @@ class OmniMultiplexedConnection(
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
     private val closed = AtomicBoolean(false)
+    private val closedSignal = CompletableDeferred<Throwable?>()
 
     val incomingRequests: Flow<TransportMessage> = requests.receiveAsFlow()
     val events: Flow<TransportMessage> = _events.asSharedFlow()
@@ -81,23 +82,26 @@ class OmniMultiplexedConnection(
 
                     TransportMessageType.REQUEST -> requests.send(message)
                     TransportMessageType.EVENT,
-                    TransportMessageType.STREAM_CHUNK,
-                    TransportMessageType.CONTROL -> _events.emit(message)
+                    TransportMessageType.STREAM_CHUNK -> _events.emit(message)
+                    TransportMessageType.CONTROL -> handleControl(message)
                 }
             }
         } catch (cancelled: CancellationException) {
+            if (!closedSignal.isCompleted) closedSignal.complete(cancelled)
             throw cancelled
         } catch (error: Throwable) {
             if (!closed.get()) {
                 _errors.emit(error)
                 failPending(error)
             }
+            if (!closedSignal.isCompleted) closedSignal.complete(error)
         } finally {
             requests.close()
             if (!closed.get()) {
                 closed.set(true)
                 session.close()
             }
+            if (!closedSignal.isCompleted) closedSignal.complete(null)
         }
     }
 
@@ -179,6 +183,32 @@ class OmniMultiplexedConnection(
         metadata = metadata
     )
 
+    suspend fun ping(timeoutMillis: Long = 5_000): Long {
+        require(timeoutMillis > 0) { "timeoutMillis must be positive" }
+        check(isOpen) { "Transport connection is closed" }
+
+        val correlationId = UUID.randomUUID().toString()
+        val deferred = CompletableDeferred<TransportMessage>()
+        check(pending.putIfAbsent(correlationId, deferred) == null)
+
+        val startedAt = System.nanoTime()
+        try {
+            session.sendAsync(
+                TransportMessage(
+                    type = TransportMessageType.CONTROL,
+                    capability = TRANSPORT_PING,
+                    correlationId = correlationId
+                )
+            )
+            withTimeout(timeoutMillis) { deferred.await() }
+            return (System.nanoTime() - startedAt) / 1_000_000L
+        } finally {
+            pending.remove(correlationId, deferred)
+        }
+    }
+
+    suspend fun awaitClosed(): Throwable? = closedSignal.await()
+
     suspend fun emitEvent(
         capability: String,
         payload: ByteArray = byteArrayOf(),
@@ -202,8 +232,31 @@ class OmniMultiplexedConnection(
         readerJob.cancel()
         requests.close()
         failPending(OmniTransportException("Transport connection closed"))
+        if (!closedSignal.isCompleted) closedSignal.complete(null)
         if (ownsScope) {
             scope.cancel()
+        }
+    }
+
+    private suspend fun handleControl(message: TransportMessage) {
+        when (message.capability) {
+            TRANSPORT_PING -> {
+                session.sendAsync(
+                    TransportMessage(
+                        type = TransportMessageType.CONTROL,
+                        capability = TRANSPORT_PONG,
+                        correlationId = message.correlationId
+                    )
+                )
+            }
+
+            TRANSPORT_PONG -> {
+                val id = message.correlationId
+                val waiter = id?.let { pending.remove(it) }
+                if (waiter != null) waiter.complete(message) else _events.emit(message)
+            }
+
+            else -> _events.emit(message)
         }
     }
 
