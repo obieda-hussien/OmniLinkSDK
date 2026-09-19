@@ -33,6 +33,33 @@ publishing {
             artifactId = "omni-link-transport"
             version = omniLinkVersion
             from(components["java"])
+
+            pom {
+                name.set("OmniLink Transport")
+                description.set("Authenticated encrypted JVM transport for OmniLink Android/Desktop communication.")
+                url.set("https://github.com/obieda-hussien/OmniLinkSDK")
+
+                licenses {
+                    license {
+                        name.set("Omni Reference Source License 1.0")
+                        url.set("https://github.com/obieda-hussien/OmniLinkSDK/blob/main/LICENSE")
+                        distribution.set("repo")
+                    }
+                }
+
+                developers {
+                    developer {
+                        id.set("obieda-hussien")
+                        name.set("Abdelrahman Hussein (عبدالرحمن حسين)")
+                    }
+                }
+
+                scm {
+                    url.set("https://github.com/obieda-hussien/OmniLinkSDK")
+                    connection.set("scm:git:https://github.com/obieda-hussien/OmniLinkSDK.git")
+                    developerConnection.set("scm:git:ssh://git@github.com/obieda-hussien/OmniLinkSDK.git")
+                }
+            }
         }
     }
 }
