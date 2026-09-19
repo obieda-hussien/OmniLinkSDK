@@ -97,6 +97,7 @@ class ResumableFileTransferTest {
         server.close()
         source.delete()
         receiveDir.deleteRecursively()
+        Unit
     }
 
     private fun sha256(bytes: ByteArray): String =
