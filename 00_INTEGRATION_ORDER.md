@@ -95,7 +95,7 @@ For 1.4.0:
 2. Run the full build and tests.
 3. Run publishToMavenLocal for both modules.
 4. Check every Markdown file for stale version or trust assumptions.
-5. Land the 1.3 trust-mesh base before the stacked 1.4 transport changes.
+5. Ensure the trust-mesh foundation is on main before landing the stacked 1.4 transport changes.
 6. Merge 1.4 to main.
 7. Let the release workflow create v1.4.0.
 8. Verify the JitPack module list.
