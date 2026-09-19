@@ -129,7 +129,7 @@ internal object SigningCertificateUtils {
             signatures.orEmpty().map { signature ->
                 val digest = MessageDigest.getInstance("SHA-256")
                     .digest(signature.toByteArray())
-                digest.joinToString(separator = "") { byte -> "%02x".format(byte) }
+                digest.joinToString(separator = "") { byte -> "%02x".format(byte.toInt() and 0xff) }
             }.distinct()
         } catch (_: Exception) {
             emptyList()
