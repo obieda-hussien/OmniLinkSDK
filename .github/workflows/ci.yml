@@ -25,6 +25,9 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      - name: Verify documentation version
+        run: bash scripts/verify_docs_version.sh
+
       - name: Build Android + JVM transport and run tests
         run: ./gradlew build test --stacktrace
 
