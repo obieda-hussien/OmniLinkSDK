@@ -58,6 +58,18 @@ internal object TransportCrypto {
         return "%06d".format(value % 1_000_000L)
     }
 
+    fun serverConfirmationBytes(
+        proofTranscript: ByteArray,
+        clientProofSignature: ByteArray
+    ): ByteArray {
+        val domain = "OMNILINK-SERVER-CONFIRM-v1".toByteArray(Charsets.UTF_8)
+        return sha256(concat(
+            intBytes(domain.size), domain,
+            intBytes(proofTranscript.size), proofTranscript,
+            intBytes(clientProofSignature.size), clientProofSignature
+        ))
+    }
+
     fun deriveSessionKeys(
         localEphemeral: EphemeralKeyPair,
         remoteEphemeralPublic: ByteArray,
