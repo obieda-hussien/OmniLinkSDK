@@ -2,7 +2,7 @@
 # ==============================================================================
 # Omni Ecosystem — Shared Signing Keystore Generator
 # ------------------------------------------------------------------------------
-# Generates the ONE release keystore that must sign all six apps:
+# Generates the ONE release keystore that should sign all first-party Omni apps:
 #   OmniDev-Workspace, OmniEqualizer, OmniNote, OmniMemoria, OmniPriceWatch,
 #   Omni-launcher
 # Also generates ONE shared debug keystore, so debug builds across Termux and
