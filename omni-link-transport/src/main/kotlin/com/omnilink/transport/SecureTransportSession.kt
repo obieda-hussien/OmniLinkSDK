@@ -39,23 +39,27 @@ class SecureTransportSession internal constructor(
         }
 
         val plaintext = BinaryMessageCodec.encode(message)
-        val sequence = txSequence.incrementAndGet()
-        val ciphertext = TransportCrypto.encrypt(
-            key = txKey,
-            noncePrefix = txNoncePrefix,
-            sequence = sequence,
-            aad = aad(sessionId, txDirectionLabel, sequence),
-            plaintext = plaintext
-        )
 
-        val frameLength = Long.SIZE_BYTES + ciphertext.size
-        if (frameLength > maxEncryptedFrameBytes) {
-            throw TransportFrameTooLargeException(
-                "Encrypted frame $frameLength exceeds $maxEncryptedFrameBytes bytes"
-            )
-        }
-
+        // Sequence allocation and socket write must be one ordered critical section. If two
+        // concurrent callers obtain sequence 1/2 before the lock and acquire the write lock in the
+        // opposite order, the receiver correctly interprets that as a replay/out-of-order attack.
         synchronized(sendLock) {
+            val sequence = txSequence.incrementAndGet()
+            val ciphertext = TransportCrypto.encrypt(
+                key = txKey,
+                noncePrefix = txNoncePrefix,
+                sequence = sequence,
+                aad = aad(sessionId, txDirectionLabel, sequence),
+                plaintext = plaintext
+            )
+
+            val frameLength = Long.SIZE_BYTES + ciphertext.size
+            if (frameLength > maxEncryptedFrameBytes) {
+                throw TransportFrameTooLargeException(
+                    "Encrypted frame $frameLength exceeds $maxEncryptedFrameBytes bytes"
+                )
+            }
+
             output.writeInt(frameLength)
             output.writeLong(sequence)
             output.write(ciphertext)
