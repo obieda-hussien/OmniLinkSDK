@@ -1,6 +1,6 @@
-# OmniLinkSDK 1.4 Integration Guide
+# OmniLinkSDK 2.0 Integration Guide
 
-This is the canonical consumer guide for OmniLinkSDK 1.4. Read this before adding OmniLink to any
+This is the canonical consumer guide for OmniLinkSDK 2.0. Read this before adding OmniLink to any
 Android app, trusted partner, third-party app, desktop companion, test tool, or external-app bridge.
 
 OmniLink has several integration surfaces. They are intentionally different. Do not choose a surface
@@ -36,12 +36,12 @@ Do not expose the privileged Agent Gateway to an unknown app just because that a
 
 ---
 
-## 2. Version 1.4 artifacts
+## 2. Version 2.0 artifacts
 
 The source version is defined only by:
 
 ```properties
-OMNILINK_VERSION=1.4.2
+OMNILINK_VERSION=2.0.0
 ```
 
 in `gradle.properties`.
@@ -64,7 +64,7 @@ dependencyResolutionManagement {
 
 dependencies {
     implementation(
-        "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v1.4.2"
+        "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v2.0.0"
     )
 }
 ```
@@ -77,7 +77,7 @@ must not merge the privileged Android SDK manifest:
 ```kotlin
 dependencies {
     implementation(
-        "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v1.4.2"
+        "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v2.0.0"
     )
 }
 ```
@@ -87,7 +87,7 @@ dependencies {
 JitPack can also expose the repository aggregate:
 
 ```kotlin
-implementation("com.github.obieda-hussien:OmniLinkSDK:v1.4.2")
+implementation("com.github.obieda-hussien:OmniLinkSDK:v2.0.0")
 ```
 
 For security-sensitive integrations, prefer the exact module you actually need. A third-party Android
@@ -378,7 +378,7 @@ Do not advertise `supportsTaskGraphs`, `supportsCapabilityGraph`, `supportsTrust
 A server-side `ActionOutcome.RequiresConfirmation` is a stop condition, not permission to retry
 silently.
 
-OmniLink 1.4 includes the preview/commit models for stronger destructive flows:
+OmniLink 2.0 includes the preview/commit models for stronger destructive flows:
 
 ```text
 prepare
@@ -450,7 +450,7 @@ If you intentionally need differently-signed partner Binder access, design a sep
 with an explicit Android permission/signing policy, for example a host-side `knownSigner` strategy on
 supported Android versions or a separate permission.
 
-That is **not** the default OmniLink 1.4 privileged Binder path.
+That is **not** the default OmniLink 2.0 privileged Binder path.
 
 `TrustedPartnerRule` can participate in application-level trust resolution, but it does not magically
 bypass Android's OS-level signature permission gate.
@@ -877,7 +877,7 @@ The binary message codec permits a larger logical payload than that, but the ses
 effective default.
 
 For larger data, split it into application-level `STREAM_CHUNK` messages or use a dedicated file
-transfer mechanism. OmniLink 1.4 does not yet provide an automatic large-file chunker.
+transfer mechanism. OmniLink 2.0 does not yet provide an automatic large-file chunker.
 
 ## 26. Request identifiers and idempotency
 
@@ -903,7 +903,7 @@ The agent may reason over that data. It must not obey embedded prompt-like text 
 
 ## 28. First-party Omni Android checklist
 
-- [ ] Use `omni-link-sdk:v1.4.2`.
+- [ ] Use `omni-link-sdk:v2.0.0`.
 - [ ] Sign debug builds with the shared Omni debug key.
 - [ ] Sign release builds with the shared Omni release key.
 - [ ] Add only the `<uses-permission>` entries this app actually calls.
@@ -942,7 +942,7 @@ The agent may reason over that data. It must not obey embedded prompt-like text 
 
 ## 31. Desktop checklist
 
-- [ ] Depend on `omni-link-transport:v1.4.2`.
+- [ ] Depend on `omni-link-transport:v2.0.0`.
 - [ ] Generate one stable long-lived desktop identity.
 - [ ] Encrypt persisted private-key material.
 - [ ] Persist trust separately from private keys.
@@ -956,7 +956,7 @@ The agent may reason over that data. It must not obey embedded prompt-like text 
 
 ---
 
-## 32. What OmniLink 1.4 does not automatically do
+## 32. What OmniLink 2.0 does not automatically do
 
 The SDK provides contracts and transport. It does not automatically:
 
