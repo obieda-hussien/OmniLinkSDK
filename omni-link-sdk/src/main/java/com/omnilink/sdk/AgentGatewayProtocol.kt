@@ -41,7 +41,9 @@ data class AgentGatewayManifest(
     val supportsTools: Boolean = true,
     val supportsTeamMode: Boolean = true,
     val supportsPersistentHistory: Boolean = true,
-    val supportsAgentConsole: Boolean = true
+    val supportsAgentConsole: Boolean = true,
+    val supportsHistoryRead: Boolean = false,
+    val supportsEventReplay: Boolean = false
 )
 
 @Serializable
@@ -140,3 +142,61 @@ sealed interface AgentTaskEvent {
         override val timestamp: Long
     ) : AgentTaskEvent
 }
+
+
+/** Query parameters for listing conversations owned by the calling application. */
+@Serializable
+data class AgentConversationQuery(
+    val limit: Int = 50,
+    val beforeUpdatedAt: Long? = null,
+    val search: String? = null
+)
+
+/** Query parameters for reading one conversation page. */
+@Serializable
+data class AgentConversationReadQuery(
+    val limit: Int = 100,
+    val beforeMessageId: Long? = null
+)
+
+@Serializable
+data class AgentConversationSummary(
+    val clientConversationId: String,
+    val workspaceSessionId: Long,
+    val title: String,
+    val sourceAppPackage: String,
+    val sourceAppName: String,
+    val lastUpdated: Long,
+    val status: String? = null
+)
+
+@Serializable
+data class AgentConversationList(
+    val conversations: List<AgentConversationSummary>,
+    val nextBeforeUpdatedAt: Long? = null
+)
+
+@Serializable
+data class AgentConversationMessage(
+    val id: Long,
+    val role: String,
+    val content: String,
+    val timestamp: Long,
+    /** Serialized Workspace Agent Console payload for faithful rendering by clients. */
+    val consoleJson: String? = null
+)
+
+@Serializable
+data class AgentConversationSnapshot(
+    val conversation: AgentConversationSummary,
+    val messages: List<AgentConversationMessage>,
+    val nextBeforeMessageId: Long? = null
+)
+
+@Serializable
+data class AgentTaskEventPage(
+    val taskId: String,
+    val events: List<AgentTaskEvent>,
+    val lastSequence: Long,
+    val hasMore: Boolean = false
+)
