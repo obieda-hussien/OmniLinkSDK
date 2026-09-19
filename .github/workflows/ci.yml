@@ -28,6 +28,9 @@ jobs:
       - name: Build Android + JVM transport and run tests
         run: ./gradlew build test --stacktrace
 
+      - name: Verify local Maven publications
+        run: ./gradlew publishToMavenLocal --stacktrace
+
   publish_verify:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
