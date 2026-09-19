@@ -12,13 +12,15 @@ or shipping derivative builds of this source is not permitted except for the lim
 rights that apply to public repositories. See [LICENSE](LICENSE), [NOTICE.md](NOTICE.md), and
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Version **2.0.0** supports two distinct integration domains:
+Version **2.0.0** splits public and privileged integration by design:
 
-- same-device Android IPC for first-party Omni apps through Binder/AIDL;
-- authenticated encrypted Android/desktop transport over TCP, LAN, localhost or ADB tunnels.
+- `omni-link-public`: narrow Ask/Share/Open contracts for unknown or third-party Android apps;
+- `omni-link-sdk`: trusted Android Binder/AIDL, provider verification and large-payload adapters;
+- `omni-link-transport`: authenticated encrypted Android/desktop transport with explicit
+  directional ACLs and resumable file transfer.
 
-It also defines safe public/partner integration contracts without weakening the privileged first-party
-surface.
+Importing source code or an artifact never grants trust. Privileged authority is decided by the
+receiving host from Android signing identity, pinned transport identity and explicit capability ACLs.
 
 The version source of truth is:
 
