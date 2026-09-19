@@ -378,7 +378,7 @@ Do not advertise `supportsTaskGraphs`, `supportsCapabilityGraph`, `supportsTrust
 A server-side `ActionOutcome.RequiresConfirmation` is a stop condition, not permission to retry
 silently.
 
-For stronger destructive flows use the 1.3+ preview/commit models:
+OmniLink 1.4 includes the preview/commit models for stronger destructive flows:
 
 ```text
 prepare
