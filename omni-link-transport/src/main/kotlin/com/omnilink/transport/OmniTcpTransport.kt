@@ -176,8 +176,6 @@ private fun performClientHandshake(
         )
     )
 
-    val serverTrust = resolveTrust(trustStore, admissionHandler, serverCandidate)
-
     val serverSignature = response.signatureHex.hexToBytes()
     val serverTranscript = TransportCrypto.transcriptBytes(
         clientHelloBytes,
@@ -186,6 +184,16 @@ private fun performClientHandshake(
     if (!verifySignature(serverIdentityKey, serverTranscript, serverSignature)) {
         throw PeerAuthenticationException("Server handshake signature is invalid")
     }
+
+    val serverTrustResolution = resolveTrustProvisional(
+        trustStore,
+        admissionHandler,
+        serverCandidate
+    )
+    if (serverTrustResolution.shouldPersist) {
+        trustStore.put(serverTrustResolution.record)
+    }
+    val serverTrust = serverTrustResolution.record
 
     val proofTranscript = TransportCrypto.transcriptBytes(
         clientHelloBytes,
@@ -303,8 +311,8 @@ private fun performServerHandshake(
         )
     )
 
-    val clientTrust = try {
-        resolveTrust(trustStore, admissionHandler, clientCandidate)
+    val clientTrustResolution = try {
+        resolveTrustProvisional(trustStore, admissionHandler, clientCandidate)
     } catch (e: Exception) {
         writeHandshakeFrame(
             output,
@@ -339,6 +347,11 @@ private fun performServerHandshake(
         throw PeerAuthenticationException("Client handshake signature is invalid")
     }
 
+    if (clientTrustResolution.shouldPersist) {
+        trustStore.put(clientTrustResolution.record)
+    }
+    val clientTrust = clientTrustResolution.record
+
     writeHandshakeFrame(output, encode(HandshakeFinished(accepted = true)))
 
     val keys = TransportCrypto.deriveSessionKeys(
@@ -367,11 +380,16 @@ private fun performServerHandshake(
     )
 }
 
-private fun resolveTrust(
+private data class TrustResolution(
+    val record: PeerTrustRecord,
+    val shouldPersist: Boolean
+)
+
+private fun resolveTrustProvisional(
     trustStore: PeerTrustStore,
     admissionHandler: PeerAdmissionHandler,
     candidate: PeerCandidate
-): PeerTrustRecord {
+): TrustResolution {
     val existing = trustStore.get(candidate.peerId)
     if (existing != null) {
         if (!existing.verifyCandidate(candidate)) {
@@ -379,7 +397,7 @@ private fun resolveTrust(
                 "Pinned identity/platform signer mismatch for peer '${candidate.peerId}'"
             )
         }
-        return existing
+        return TrustResolution(existing, shouldPersist = false)
     }
 
     val admitted = admissionHandler.admit(candidate)
@@ -393,8 +411,7 @@ private fun resolveTrust(
         )
     }
 
-    trustStore.put(admitted)
-    return admitted
+    return TrustResolution(admitted, shouldPersist = true)
 }
 
 private fun validateHello(
