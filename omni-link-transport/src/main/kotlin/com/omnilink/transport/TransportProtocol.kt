@@ -85,6 +85,7 @@ data class ClientProof(
 @Serializable
 data class HandshakeFinished(
     val accepted: Boolean,
+    val confirmationSignatureHex: String? = null,
     val rejectionCode: String? = null,
     val rejectionMessage: String? = null
 )
