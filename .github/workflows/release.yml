@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "omni-link-sdk/src/main/java/com/omnilink/sdk/OmniLinkConstants.kt"
+      - "gradle.properties"
       - ".github/workflows/release.yml"
   workflow_dispatch:
 
@@ -31,9 +31,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="$(sed -n 's/.*SDK_VERSION = "\([^"]*\)".*/\1/p' omni-link-sdk/src/main/java/com/omnilink/sdk/OmniLinkConstants.kt | head -n1)"
+          VERSION="$(sed -n 's/^OMNILINK_VERSION=//p' gradle.properties | head -n1 | tr -d '[:space:]')"
           if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::Invalid SDK_VERSION: '$VERSION'"
+            echo "::error::Invalid OMNILINK_VERSION: '$VERSION'"
             exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
