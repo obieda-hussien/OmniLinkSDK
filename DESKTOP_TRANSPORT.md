@@ -1,4 +1,4 @@
-# OmniLink 1.4 Desktop Transport
+# OmniLink 1.4 — Desktop / Device Transport
 
 OmniLink 1.4 adds a real cross-platform transport implementation without changing any consuming Omni
 application.
@@ -29,6 +29,12 @@ Android                         Desktop
 ```
 
 Both peers may act as client or server. The protocol is symmetrical after the handshake.
+
+Use this module for cross-device communication, desktop companions, trusted partners, test tools, or
+same-device localhost links where Android's same-signature Binder trust is not the correct boundary.
+
+For a complete integration decision tree, read
+[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md).
 
 ## Cryptographic identity
 
@@ -116,7 +122,7 @@ search.*
 build.read
 ```
 
-## Chat-only sandbox
+## PAIRED chat-only sandbox
 
 `PeerTrustProfiles.chatSandbox(candidate)` provides a safe default for a paired but low-trust peer.
 
@@ -133,7 +139,12 @@ extract.*
 It does not grant terminal, root, device-control, agent-team, memory, project or arbitrary cross-app
 capabilities.
 
-A higher-trust UI may later replace the record with a narrower or broader explicitly approved policy.
+The transport enforces this ceiling from the trust level itself. Even if a PAIRED record accidentally
+contains a wildcard ACL, terminal/Agent/Team/private-memory/project-modification namespaces remain
+unavailable.
+
+A user/admin may later replace the record with TRUSTED_PARTNER or FIRST_PARTY only after an explicit
+trust decision and with deliberate inbound/outbound ACLs.
 
 ## Unknown peers
 
@@ -195,31 +206,34 @@ This matters because modern Android restricts background and foreground-service 
 Local-network privacy rules are also evolving on current Android releases. A consumer must handle any
 runtime local-network/nearby-device permission required by the Android version it targets.
 
-## Example: desktop client
+## Example: desktop identity and first connection
+
+Create one stable identity and persist it. Do not generate a new identity on every launch.
 
 ```kotlin
-val identity = JvmEcSigningIdentity.generate(
-    peerId = "my-desktop",
-    role = PeerRole.DESKTOP
+val identityStore = EncryptedJvmIdentityStore(
+    File("secrets/omnilink-identity.json")
 )
 
-val trustStore = JsonFilePeerTrustStore(File("omnilink-trust.json"))
+val identity = if (File("secrets/omnilink-identity.json").exists()) {
+    identityStore.load(password)
+} else {
+    JvmEcSigningIdentity.generate(
+        peerId = "my-desktop",
+        role = PeerRole.DESKTOP
+    ).also { identityStore.save(it, password) }
+}
 
-val session = OmniTcpClient.connect(
-    host = "192.168.1.20",
-    identity = identity,
-    trustStore = trustStore
+val trustStore = JsonFilePeerTrustStore(
+    File("data/omnilink-trust.json")
 )
-
-session.sendUtf8(
-    capability = "chat.ask",
-    text = "Summarize this text"
-)
-
-val response = session.receive()
 ```
 
-## Example: server
+For a one-shot/manual connection use OmniTcpClient.
+
+For a real persistent desktop companion prefer OmniReliableClient and OmniMultiplexedConnection.
+
+## Example: multiplexed server
 
 ```kotlin
 val server = OmniTcpServer(
@@ -228,13 +242,23 @@ val server = OmniTcpServer(
     port = OmniTransportConstants.DEFAULT_PORT
 )
 
-server.start { session ->
-    while (session.isOpen) {
-        val message = session.receive()
-        // Route only to a capability that the host application explicitly exposes.
+server.start { secureSession ->
+    val connection = OmniMultiplexedConnection(secureSession)
+
+    connection.incomingRequests.collect { request ->
+        when (request.capability) {
+            "desktop.system.info" -> {
+                connection.respondUtf8(
+                    request,
+                    collectSafeSystemInfo()
+                )
+            }
+        }
     }
 }
 ```
+
+Unauthorized capabilities are rejected by the secure session before normal application routing.
 
 ## What this release does not do
 
@@ -250,24 +274,10 @@ The transport is nevertheless real and executable: once a consumer supplies a ha
 `OmniTcpServer` or `OmniTcpClient`, signed trusted peers can exchange encrypted capability-scoped
 messages.
 
-## Future hardening
-
-Potential next layers include:
-
-- hardware-backed key attestation verification,
-- QUIC/TLS transport adapter,
-- mDNS/NSD discovery with explicit user approval,
-- session resumption tickets,
-- multiplexed concurrent logical streams,
-- durable request outbox/inbox,
-- circuit breakers and health scoring,
-- large-stream chunking with backpressure,
-- benchmark regression budgets.
-
-
 ## Reliability runtime
 
-`OmniReliableClient` is an optional long-lived client supervisor. It does not auto-start on Android.
+`OmniReliableClient` is the recommended long-lived outgoing client supervisor. It does not auto-start
+on Android.
 
 It provides:
 
@@ -338,3 +348,95 @@ com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:<tag>
 
 For Android consumers, use the Android SDK module or repository aggregate according to the published
 JitPack module list for the release.
+
+
+## Which trust profile should a desktop/device peer get?
+
+### Unknown peer
+
+Reject by default.
+
+### Newly user-paired personal device
+
+Start with:
+
+```text
+PAIRED
+```
+
+Use the chat sandbox until the device's ownership and intended role are verified.
+
+### Official Omni desktop companion
+
+After explicit verification, use:
+
+```text
+FIRST_PARTY
+```
+
+with explicit inbound/outbound ACLs. FIRST_PARTY is not an excuse to store `*` automatically.
+
+### External organization / partner device
+
+Use:
+
+```text
+TRUSTED_PARTNER
+```
+
+and allow only the capabilities in the integration contract.
+
+### CORE
+
+Reserve for narrowly defined infrastructure that really needs core authority.
+
+Do not use CORE as "FIRST_PARTY but easier."
+
+## Android third-party note
+
+A differently-signed Android partner that only needs network/device integration can use the pure JVM
+transport artifact without consuming the first-party Android AAR.
+
+If that Android app needs a hardware-backed local transport identity, it can implement the
+`SigningIdentity` interface with Android Keystore in its own project. The built-in
+`AndroidKeystoreSigningIdentity` adapter lives in the first-party Android SDK module.
+
+Do not add the full Android AAR to an unrelated app merely to copy this helper.
+
+## Payload guidance
+
+The default encrypted frame maximum is 4 MiB.
+
+The binary message codec can represent a larger payload, but the secure-session frame cap is the
+effective default.
+
+For large files:
+
+- chunk at application level using STREAM_CHUNK;
+- or use a dedicated file transfer path;
+- do not simply raise the frame limit to hundreds of megabytes.
+
+Large-stream automatic chunking/backpressure remains future work.
+
+## Remaining future transport work
+
+Not yet implemented by the 1.4 runtime:
+
+- hardware-backed key-attestation verification;
+- mDNS/NSD discovery with explicit user approval;
+- session-resumption tickets;
+- durable request outbox/inbox across process death;
+- fully credit-based large-stream backpressure;
+- dedicated large-file transfer;
+- QUIC or alternative transport adapters;
+- benchmark regression budgets.
+
+Multiplexing, heartbeat, reconnect, exponential backoff and circuit breaker are already implemented in
+1.4 and are no longer future items.
+
+## Integration references
+
+- [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)
+- [SIGNING_TRUST.md](SIGNING_TRUST.md)
+- [OMNILINK_TRUST_MESH.md](OMNILINK_TRUST_MESH.md)
+- [CHANGELOG.md](CHANGELOG.md)
