@@ -4,6 +4,21 @@ All notable OmniLinkSDK changes are documented here.
 
 The repository version is sourced from `OMNILINK_VERSION` in `gradle.properties`.
 
+## 1.4.2
+
+### Build and supply-chain maintenance
+
+- Upgraded the Gradle wrapper from 8.13 to 8.14.5.
+- Regenerated the Gradle wrapper scripts/JAR from the Gradle 8.14.5 wrapper.
+- Updated the pinned Gradle distribution SHA-256 to the official 8.14.5 checksum.
+- Kept Android Gradle Plugin 8.13.2, Kotlin 2.4.10, JDK 17, public APIs, and Binder protocol version 4 unchanged.
+- Retained all existing CI, security-sanity, Dependency Review, CodeQL, wrapper-validation, and Maven publication gates.
+
+### Compatibility
+
+- This is a build-tool patch release with no intended source/API/AIDL behavior change.
+- Existing 1.4.x integrations can update coordinates to v1.4.2 without changing protocol code.
+
 ## 1.4.1
 
 ### Build toolchain
