@@ -20,7 +20,15 @@ data class AgentTaskRequest(
     val prompt: String,
     val scopePath: String? = null,
     val mode: AgentClientMode = AgentClientMode.AGENT,
-    val context: JsonElement = JsonNull
+    val context: JsonElement = JsonNull,
+
+    // v1.3 additive orchestration metadata.
+    val parentTaskId: String? = null,
+    val dependsOnTaskIds: List<String> = emptyList(),
+    val requestedCapabilities: Set<String> = emptySet(),
+    val priority: ActionPriority = ActionPriority.NORMAL,
+    val deadlineEpochMs: Long? = null,
+    val correlationId: String? = null
 )
 
 @Serializable
@@ -43,7 +51,13 @@ data class AgentGatewayManifest(
     val supportsPersistentHistory: Boolean = true,
     val supportsAgentConsole: Boolean = true,
     val supportsHistoryRead: Boolean = false,
-    val supportsEventReplay: Boolean = false
+    val supportsEventReplay: Boolean = false,
+
+    // Protocol primitives exist in SDK 1.3, but a Workspace runtime must explicitly opt in.
+    val supportsTaskGraphs: Boolean = false,
+    val supportsCapabilityGraph: Boolean = false,
+    val supportsTrustMesh: Boolean = false,
+    val supportsSessionProtocol: Boolean = false
 )
 
 @Serializable
@@ -143,6 +157,38 @@ sealed interface AgentTaskEvent {
     ) : AgentTaskEvent
 }
 
+/**
+ * A declarative DAG for multi-step or multi-agent work. Workspace remains the scheduler; the SDK
+ * only standardizes the shape so IDEs and first-party clients can render and resume the same graph.
+ */
+@Serializable
+data class AgentTaskGraph(
+    val graphId: String,
+    val rootTaskId: String,
+    val nodes: List<AgentTaskGraphNode>,
+    val createdAtEpochMs: Long
+)
+
+@Serializable
+data class AgentTaskGraphNode(
+    val taskId: String,
+    val parentTaskId: String? = null,
+    val dependsOnTaskIds: List<String> = emptyList(),
+    val label: String,
+    val state: AgentTaskState = AgentTaskState.QUEUED,
+    val assignedMode: AgentClientMode = AgentClientMode.AGENT,
+    val requestedCapabilities: Set<String> = emptySet(),
+    val correlationId: String? = null
+)
+
+@Serializable
+data class AgentDelegation(
+    val fromTaskId: String,
+    val toTaskId: String,
+    val targetAppPackage: String? = null,
+    val capabilityName: String? = null,
+    val rationale: String? = null
+)
 
 /** Query parameters for listing conversations owned by the calling application. */
 @Serializable
