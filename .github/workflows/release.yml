@@ -86,5 +86,7 @@ jobs:
             echo "## OmniLinkSDK ${{ steps.version.outputs.tag }}"
             echo ""
             echo "Release existed before run: ${{ steps.exists.outputs.exists }}"
-            echo "JitPack coordinate: `com.github.obieda-hussien:OmniLinkSDK:${{ steps.version.outputs.tag }}`"
+            echo "JitPack aggregate: `com.github.obieda-hussien:OmniLinkSDK:${{ steps.version.outputs.tag }}`"
+            echo "Android module: `com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:${{ steps.version.outputs.tag }}`"
+            echo "JVM transport: `com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:${{ steps.version.outputs.tag }}`"
           } >> "$GITHUB_STEP_SUMMARY"
