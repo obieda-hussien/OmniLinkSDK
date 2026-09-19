@@ -60,7 +60,7 @@ class OmniMultiplexedConnection(
     val isOpen: Boolean
         get() = !closed.get() && session.isOpen
 
-    private val readerJob: Job = scope.launch {
+    private val readerJob: Job = scope.launch(Dispatchers.IO) {
         try {
             while (session.isOpen && !closed.get()) {
                 val message = session.receive()
