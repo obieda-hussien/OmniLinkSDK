@@ -38,6 +38,8 @@ class PeerTrustTest {
         assertTrue(record.permitsOutbound("summarize.text"))
         assertFalse(record.permitsInbound("terminal.exec"))
         assertFalse(record.permitsOutbound("agent.team.start"))
+        assertTrue(record.permitsInbound(TRANSPORT_PING))
+        assertTrue(record.permitsOutbound(TRANSPORT_PONG))
     }
 
     @Test
