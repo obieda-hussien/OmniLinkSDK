@@ -25,6 +25,22 @@ class PeerTrustTest {
     }
 
     @Test
+    fun `paired peer cannot escape chat sandbox even with wildcard acl`() {
+        val record = PeerTrustRecord(
+            peerId = "paired",
+            publicKeySha256 = "aa",
+            trustLevel = TransportTrustLevel.PAIRED,
+            inboundCapabilities = setOf("*"),
+            outboundCapabilities = setOf("*")
+        )
+
+        assertTrue(record.permitsInbound("chat.ask"))
+        assertTrue(record.permitsOutbound("summarize.text"))
+        assertFalse(record.permitsInbound("terminal.exec"))
+        assertFalse(record.permitsOutbound("agent.team.start"))
+    }
+
+    @Test
     fun `expired record denies both directions`() {
         val record = PeerTrustRecord(
             peerId = "old",
