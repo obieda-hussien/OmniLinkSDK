@@ -18,15 +18,23 @@ data class PeerTrustRecord(
     fun isExpired(now: Long = System.currentTimeMillis()): Boolean =
         expiresAtEpochMs?.let { now >= it } ?: false
 
-    fun permitsInbound(capability: String): Boolean =
-        !isExpired() &&
-            trustCeilingAllows(capability) &&
+    fun permitsInbound(capability: String): Boolean {
+        if (isExpired()) return false
+        if (isInternalTransportCapability(capability)) {
+            return trustLevel != TransportTrustLevel.UNTRUSTED
+        }
+        return trustCeilingAllows(capability) &&
             matchesCapability(inboundCapabilities, capability)
+    }
 
-    fun permitsOutbound(capability: String): Boolean =
-        !isExpired() &&
-            trustCeilingAllows(capability) &&
+    fun permitsOutbound(capability: String): Boolean {
+        if (isExpired()) return false
+        if (isInternalTransportCapability(capability)) {
+            return trustLevel != TransportTrustLevel.UNTRUSTED
+        }
+        return trustCeilingAllows(capability) &&
             matchesCapability(outboundCapabilities, capability)
+    }
 
     private fun trustCeilingAllows(capability: String): Boolean = when (trustLevel) {
         TransportTrustLevel.UNTRUSTED -> false
@@ -47,6 +55,12 @@ data class PeerTrustRecord(
         return !isExpired()
     }
 }
+
+internal const val TRANSPORT_PING = "_transport.ping"
+internal const val TRANSPORT_PONG = "_transport.pong"
+
+private fun isInternalTransportCapability(capability: String): Boolean =
+    capability == TRANSPORT_PING || capability == TRANSPORT_PONG
 
 private val chatSandboxPrefixes = listOf(
     "chat.",
