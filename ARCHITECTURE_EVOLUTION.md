@@ -1,21 +1,133 @@
 # OmniLinkSDK Architecture Evolution
 
-This document outlines technical proposals to evolve the SDK for higher performance, lower latency, and modern Android (15/16/17) compliance.
+This file tracks what is implemented in the 1.3 source line and what remains staged for later transport
+work.
 
-## 1. Zero-Copy & Binary Serialization (Performance & Latency)
-Currently, `ActionRequest` and `OmniEvent` use JSON strings via `kotlinx.serialization`. For high-throughput or large data (like images or ML tensors):
-- **Protobuf or FlatBuffers:** Migrate the wire format from JSON strings to binary. FlatBuffers allows zero-copy reads, eliminating parsing overhead entirely.
-- **SharedMemory (Ashmem) for Large Payloads:** For payloads exceeding 1MB (the Binder transaction limit), the SDK should automatically transparently negotiate a `ParcelFileDescriptor` wrapping `SharedMemory` or `MemoryFile`. This prevents `TransactionTooLargeException` and achieves zero-copy large data transfer.
+## Implemented in 1.3
 
-## 2. Asynchronous IPC (Non-blocking)
-- **`oneway` AIDL Methods:** Currently, `executeAction` is a synchronous AIDL method blocking the caller's thread until `ActionOutcome` returns. For heavy processing, this is suboptimal.
-- **Callback-based Execution:** Change the AIDL signature to `oneway void executeAction(..., IOmniResultCallback callback)`. This frees the binder thread pool immediately, allowing the extension to process the request on its own time and stream the result back asynchronously.
+### Identity and trust
 
-## 3. Advanced Event Bus (Backpressure)
-- **Flow Control:** The current `IOmniEventCallback` pushes events. If the producer is faster than the consumer, the binder buffer fills up.
-- **Reactive Streams over IPC:** Implement true backpressure (like RxJava/Flow `request(n)`) across the AIDL boundary so the consumer dictates the event rate.
+- shared first-party signing model documented,
+- fail-closed `SameSignerSecurityValidator` default,
+- Binder UID -> package set -> signing certificate resolution,
+- signing history support for controlled key rotation,
+- CORE / FIRST_PARTY / TRUSTED_PARTNER / UNTRUSTED tiers,
+- partner capability allowlists,
+- communication direction and data-scope metadata.
 
-## 4. Modern Android Constraints (Android 15+)
-- **Strict Background Restrictions:** Android 15 heavily restricts background service starts and foreground service (FGS) durations (e.g., the 6-hour limit on `dataSync`).
-- **WorkManager Integration:** As noted in the heartbeat phase, indefinite background services are no longer viable. The SDK should provide native `WorkManager` hooks for periodic tasks (`_tick`) rather than assuming long-lived binds.
-- **Security & Signature Verification:** Relying solely on `Binder.getCallingUid()` and package name checks is vulnerable to package spoofing on rooted devices. The SDK should implement cryptographic signature verification (checking the APK's signing certificate) to ensure only authorized Workspace/Satellite apps can connect.
+### Runtime hardening
+
+- single SDK version source,
+- canonical forward-compatible JSON codec,
+- parse-once execution/audit path,
+- inline request size guard,
+- request deadlines,
+- undeclared-capability rejection for explicit manifests,
+- synchronous-call rejection for declared non-IMMEDIATE work,
+- bounded concurrent async execution,
+- coroutine cancellation when the Service dies,
+- bounded local event buffering.
+
+### Agent/tool semantics
+
+- richer capability contracts,
+- capability graph models,
+- agent task DAG/delegation models,
+- preview -> commit confirmation models,
+- external app adapter routing models,
+- separate limited public Omni request contract.
+
+### Transport-independent session foundation
+
+`OmniSessionHello` and `OmniFrame` model:
+
+- multiplexed streams,
+- request/result/event frames,
+- ACK credits,
+- cancellation,
+- health pings,
+- control/data/event lanes,
+- codec negotiation,
+- large-payload transport negotiation.
+
+The session layer contains no Android classes so the same semantics can later be carried over Binder,
+local sockets, LAN, USB/ADB or desktop transports.
+
+## Staged next work
+
+### 1. Actual large-payload Binder path
+
+The protocol now models FILE_DESCRIPTOR / PIPE / SHARED_MEMORY / CONTENT_URI, but the deployed AIDL
+surface still uses inline JSON.
+
+The next transport release should append new AIDL methods rather than mutate existing transaction
+positions. Android implementations should prefer:
+
+- inline for small control payloads,
+- ParcelFileDescriptor/pipe for large streams,
+- SharedMemory where supported and appropriate for large immutable data.
+
+Thresholds must come from benchmarks, not guesses.
+
+### 2. True cross-process flow control
+
+The current Flow wrapper bounds the client queue, while event replay/sequence numbers enable gap
+recovery.
+
+The session layer already defines credit ACKs. A later Binder/session implementation should make the
+producer stop emitting when the receiver has no credit instead of relying on callback buffering.
+
+### 3. Persistent reliability layer
+
+Add a durable outbox/inbox for requests that must survive process death, including:
+
+- request ID,
+- idempotency key,
+- attempt number,
+- retry/backoff policy,
+- terminal state,
+- deduplication record.
+
+This is especially important for destructive operations where a caller can lose the Binder connection
+after execution but before receiving the result.
+
+### 4. Transport adapters
+
+Once the session protocol is stable, add adapters for:
+
+- Android Binder,
+- local socket,
+- LAN,
+- USB/ADB,
+- desktop companion runtime.
+
+The agent/tool model should not change when transport changes.
+
+### 5. Benchmarks and regression budgets
+
+Add instrumentation/macro benchmarks for:
+
+- Binder RPC p50/p95/p99,
+- serialization/deserialization,
+- allocations per request,
+- events/sec,
+- reconnect/resume latency,
+- large-payload throughput,
+- memory behavior under sustained streams.
+
+CI should eventually fail changes that exceed agreed regression budgets.
+
+### 6. Workspace integration
+
+Protocol support is not runtime support. Workspace must explicitly advertise feature flags only after
+it implements:
+
+- trust-aware capability graph,
+- task DAG scheduling,
+- preview/commit confirmation,
+- event replay/credit flow,
+- session protocol,
+- large-payload transport,
+- external-app adapter router.
+
+Until then, corresponding gateway/manifest support flags remain false.
