@@ -19,10 +19,22 @@ data class PeerTrustRecord(
         expiresAtEpochMs?.let { now >= it } ?: false
 
     fun permitsInbound(capability: String): Boolean =
-        !isExpired() && matchesCapability(inboundCapabilities, capability)
+        !isExpired() &&
+            trustCeilingAllows(capability) &&
+            matchesCapability(inboundCapabilities, capability)
 
     fun permitsOutbound(capability: String): Boolean =
-        !isExpired() && matchesCapability(outboundCapabilities, capability)
+        !isExpired() &&
+            trustCeilingAllows(capability) &&
+            matchesCapability(outboundCapabilities, capability)
+
+    private fun trustCeilingAllows(capability: String): Boolean = when (trustLevel) {
+        TransportTrustLevel.UNTRUSTED -> false
+        TransportTrustLevel.PAIRED -> isChatSandboxCapability(capability)
+        TransportTrustLevel.TRUSTED_PARTNER,
+        TransportTrustLevel.FIRST_PARTY,
+        TransportTrustLevel.CORE -> true
+    }
 
     fun verifyCandidate(candidate: PeerCandidate): Boolean {
         if (peerId != candidate.peerId) return false
@@ -35,6 +47,17 @@ data class PeerTrustRecord(
         return !isExpired()
     }
 }
+
+private val chatSandboxPrefixes = listOf(
+    "chat.",
+    "search.",
+    "summarize.",
+    "translate.",
+    "extract."
+)
+
+private fun isChatSandboxCapability(capability: String): Boolean =
+    chatSandboxPrefixes.any(capability::startsWith)
 
 private fun matchesCapability(patterns: Set<String>, capability: String): Boolean {
     return patterns.any { pattern ->
