@@ -3,8 +3,8 @@
 # Omni Ecosystem — Shared Signing Keystore Generator
 # ------------------------------------------------------------------------------
 # Generates the ONE release keystore that should sign all first-party Omni apps:
-#   OmniDev-Workspace, OmniEqualizer, OmniNote, OmniMemoria, OmniPriceWatch,
-#   Omni-launcher
+#   OmniDev-Workspace, Omni AndroidIDE, OmniEqualizer, OmniNote, OmniMemoria,
+#   OmniPriceWatch, Omni-launcher and future first-party Omni applications
 # Also generates ONE shared debug keystore, so debug builds across Termux and
 # AndroidIDE don't accidentally end up signed with different per-tool debug
 # keys (which would break installs the same way a release mismatch would).
@@ -83,8 +83,8 @@ fi
 
 echo
 echo "=============================================================="
-echo " RELEASE certificate SHA-256 (paste this into every satellite"
-echo " app's SignatureSecurityValidator allowlist)"
+echo " RELEASE certificate SHA-256 (record for verification/rotation;"
+echo " first-party apps use SameSignerSecurityValidator automatically)"
 echo "=============================================================="
 keytool -list -v -keystore "$RELEASE_KEYSTORE" -alias "$RELEASE_ALIAS" -storepass "$RELEASE_PASSWORD" \
   | grep -A1 "SHA256:" | head -1
