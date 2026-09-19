@@ -21,7 +21,7 @@ OmniLinkSDK
 Version source:
 
 ```properties
-OMNILINK_VERSION=1.4.0
+OMNILINK_VERSION=1.4.1
 ```
 
 Binder wire version:
