@@ -1,4 +1,4 @@
-# OmniLinkSDK 1.4 — Integration Order
+# OmniLinkSDK 2.0 — Integration Order
 
 This filename is retained for compatibility with older planning links. The old prompt index and
 consumer-specific phase list are retired.
@@ -23,7 +23,7 @@ For API examples and detailed integration patterns, use
 2. Add the 1.4 Android module:
    ```kotlin
    implementation(
-       "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v1.4.2"
+       "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v2.0.0"
    )
    ```
 3. Decide whether the app is an extension provider, caller, Agent Gateway client, or several of these.
@@ -49,7 +49,7 @@ If structured bidirectional communication is needed, use the pure transport modu
 
 ```kotlin
 implementation(
-    "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v1.4.2"
+    "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v2.0.0"
 )
 ```
 
@@ -72,7 +72,7 @@ OPEN_OMNI
 The host should force unknown callers into CHAT-only behavior. Do not expose AGENT, TEAM, private
 memory, terminal, Shizuku, root, project modification or autonomous privileged cross-app execution.
 
-If the user explicitly pairs a network peer, start with the PAIRED chat sandbox. OmniLink 1.4 enforces
+If the user explicitly pairs a network peer, start with the PAIRED chat sandbox. OmniLink 2.0 enforces
 that ceiling inside the transport policy even if a stored ACL accidentally contains a wildcard.
 
 ## Desktop rollout
@@ -89,7 +89,7 @@ that ceiling inside the transport policy even if a stored ACL accidentally conta
 
 ## OmniLink release order
 
-For 1.4.2:
+For 2.0.0:
 
 1. OMNILINK_VERSION remains the only source version.
 2. Run the full build and tests.
@@ -97,9 +97,9 @@ For 1.4.2:
 4. Check every Markdown file for stale version or trust assumptions.
 5. Ensure the trust-mesh foundation is on main before landing the stacked 1.4 transport changes.
 6. Merge 1.4 to main.
-7. Let the release workflow create v1.4.2.
+7. Let the release workflow create v2.0.0.
 8. Verify the JitPack module list.
-9. Only then move consumers to v1.4.2.
+9. Only then move consumers to v2.0.0.
 
 ## Canonical documentation
 

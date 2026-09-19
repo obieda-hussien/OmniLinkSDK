@@ -1,4 +1,4 @@
-# OmniLinkSDK 1.4 — Maintainer / Coding-Agent Instructions
+# OmniLinkSDK 2.0 — Maintainer / Coding-Agent Instructions
 
 This filename is retained because older planning material linked to it. It is no longer a speculative
 "build OmniLink from scratch" prompt.
@@ -21,7 +21,7 @@ OmniLinkSDK
 Version source:
 
 ```properties
-OMNILINK_VERSION=1.4.2
+OMNILINK_VERSION=2.0.0
 ```
 
 Binder wire version:

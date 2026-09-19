@@ -3,7 +3,7 @@ package com.omnilink.transport
 import kotlinx.serialization.Serializable
 
 object OmniTransportConstants {
-    const val PROTOCOL_VERSION = 1
+    const val PROTOCOL_VERSION = 2
     const val DEFAULT_PORT = 49371
     const val DEFAULT_CONNECT_TIMEOUT_MS = 10_000
     const val DEFAULT_HANDSHAKE_TIMEOUT_MS = 10_000
@@ -47,7 +47,9 @@ data class ClientHello(
     val supportedFeatures: Set<String> = setOf(
         "encrypted_frames",
         "capability_policy",
-        "replay_protection"
+        "replay_protection",
+        "directional_acl",
+        "resumable_transfer_v1"
     )
 )
 
@@ -64,7 +66,9 @@ data class ServerHelloUnsigned(
     val supportedFeatures: Set<String> = setOf(
         "encrypted_frames",
         "capability_policy",
-        "replay_protection"
+        "replay_protection",
+        "directional_acl",
+        "resumable_transfer_v1"
     )
 )
 

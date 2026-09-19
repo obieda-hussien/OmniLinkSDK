@@ -1,4 +1,4 @@
-# OmniLinkSDK 1.4
+# OmniLinkSDK 2.0
 
 [![](https://jitpack.io/v/obieda-hussien/OmniLinkSDK.svg)](https://jitpack.io/#obieda-hussien/OmniLinkSDK)
 
@@ -12,18 +12,20 @@ or shipping derivative builds of this source is not permitted except for the lim
 rights that apply to public repositories. See [LICENSE](LICENSE), [NOTICE.md](NOTICE.md), and
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Version **1.4.2** supports two distinct integration domains:
+Version **2.0.0** splits public and privileged integration by design:
 
-- same-device Android IPC for first-party Omni apps through Binder/AIDL;
-- authenticated encrypted Android/desktop transport over TCP, LAN, localhost or ADB tunnels.
+- `omni-link-public`: narrow Ask/Share/Open contracts for unknown or third-party Android apps;
+- `omni-link-sdk`: trusted Android Binder/AIDL, provider verification and large-payload adapters;
+- `omni-link-transport`: authenticated encrypted Android/desktop transport with explicit
+  directional ACLs and resumable file transfer.
 
-It also defines safe public/partner integration contracts without weakening the privileged first-party
-surface.
+Importing source code or an artifact never grants trust. Privileged authority is decided by the
+receiving host from Android signing identity, pinned transport identity and explicit capability ACLs.
 
 The version source of truth is:
 
 ```properties
-OMNILINK_VERSION=1.4.2
+OMNILINK_VERSION=2.0.0
 ```
 
 in `gradle.properties`.
@@ -106,7 +108,7 @@ dependencyResolutionManagement {
 ```kotlin
 dependencies {
     implementation(
-        "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v1.4.2"
+        "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v2.0.0"
     )
 }
 ```
@@ -116,7 +118,7 @@ dependencies {
 ```kotlin
 dependencies {
     implementation(
-        "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v1.4.2"
+        "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v2.0.0"
     )
 }
 ```
@@ -125,7 +127,7 @@ dependencies {
 
 ```kotlin
 dependencies {
-    implementation("com.github.obieda-hussien:OmniLinkSDK:v1.4.2")
+    implementation("com.github.obieda-hussien:OmniLinkSDK:v2.0.0")
 }
 ```
 
@@ -273,7 +275,7 @@ Android Binder protocol remains:
 CURRENT_PROTOCOL_VERSION = 4
 ```
 
-Version 1.4 does not reorder existing AIDL methods.
+Version 2.0 does not reorder existing AIDL methods.
 
 New protocol fields use conservative defaults and the canonical JSON codec ignores unknown additive
 fields.

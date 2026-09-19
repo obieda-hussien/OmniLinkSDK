@@ -1,4 +1,4 @@
-# OmniLink 1.4 — Signing & Trust Model
+# OmniLink 2.0 — Signing & Trust Model
 
 ## Goal
 
@@ -104,7 +104,7 @@ one signing source, no copied plaintext passwords.
 
 ## Runtime trust
 
-OmniLink 1.4 remains fail-closed by default:
+OmniLink 2.0 remains fail-closed by default:
 
 ```kotlin
 open val securityValidator: SecurityValidator = SameSignerSecurityValidator()
@@ -179,7 +179,7 @@ The APK signing identity and the 1.4 network transport identity are deliberately
 The running Android app does not normally possess the developer's APK signing private key, so a PC
 cannot authenticate the phone by asking it to sign a network challenge with that release key.
 
-Instead, OmniLink 1.4 uses a long-lived transport signing key:
+Instead, OmniLink 2.0 uses a long-lived transport signing key:
 
 - Android: `AndroidKeystoreSigningIdentity`
 - Desktop/JVM: `JvmEcSigningIdentity`
