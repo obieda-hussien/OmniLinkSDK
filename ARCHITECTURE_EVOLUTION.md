@@ -1,133 +1,295 @@
-# OmniLinkSDK Architecture Evolution\n\n## Implemented in 1.4\n\n### Real desktop/JVM transport\n\n- pure JVM `omni-link-transport` artifact,\n- TCP client and server,\n- ECDSA P-256 mutual signed handshake,\n- ephemeral ECDH P-256 key agreement,\n- HKDF-SHA256 session derivation,\n- independent AES-256-GCM keys per direction,\n- replay/out-of-order sequence enforcement,\n- capability-scoped inbound/outbound ACLs,\n- strict peer pinning and explicit pairing hooks,\n- chat-sandbox trust profile,\n- encrypted desktop identity persistence,\n- AndroidKeyStore identity adapter and Android peer trust persistence.\n
+# OmniLinkSDK Architecture Evolution
 
-This file tracks what is implemented in the 1.3 source line and what remains staged for later transport
-work.
+This document separates what OmniLink 1.4 actually implements from what remains protocol-only or
+future work.
 
-## Implemented in 1.3
+Do not advertise a feature as available merely because a model class exists.
 
-### Identity and trust
+## Implemented in 1.4
 
-- shared first-party signing model documented,
-- fail-closed `SameSignerSecurityValidator` default,
-- Binder UID -> package set -> signing certificate resolution,
-- signing history support for controlled key rotation,
-- CORE / FIRST_PARTY / TRUSTED_PARTNER / UNTRUSTED tiers,
-- partner capability allowlists,
-- communication direction and data-scope metadata.
+### Real desktop/JVM transport
 
-### Runtime hardening
+The pure JVM `omni-link-transport` module now provides:
 
-- single SDK version source,
-- canonical forward-compatible JSON codec,
-- parse-once execution/audit path,
-- inline request size guard,
-- request deadlines,
-- undeclared-capability rejection for explicit manifests,
-- synchronous-call rejection for declared non-IMMEDIATE work,
-- bounded concurrent async execution,
-- coroutine cancellation when the Service dies,
-- bounded local event buffering.
+- TCP client and server;
+- Android/desktop Java-Kotlin interoperability;
+- long-lived ECDSA P-256 identities;
+- ephemeral ECDH P-256 session agreement;
+- random handshake nonces;
+- HKDF-SHA256 key derivation;
+- independent AES-256-GCM keys per direction;
+- final server key confirmation;
+- sequence-based replay/out-of-order rejection;
+- frame-size enforcement;
+- binary message encoding;
+- peer pinning;
+- pairing hooks/codes;
+- directional capability ACLs;
+- PAIRED chat-sandbox hard ceiling.
 
-### Agent/tool semantics
+### Multiplexed transport runtime
 
-- richer capability contracts,
-- capability graph models,
-- agent task DAG/delegation models,
-- preview -> commit confirmation models,
-- external app adapter routing models,
-- separate limited public Omni request contract.
+`OmniMultiplexedConnection` provides:
 
-### Transport-independent session foundation
+- one socket reader;
+- concurrent requests;
+- correlation-id response dispatch;
+- request flow;
+- event flow;
+- stream/control routing;
+- encrypted transport ping/pong;
+- clean close/error propagation.
+
+### Reliability runtime
+
+`OmniReliableClient` provides:
+
+- persistent outgoing connection supervision;
+- heartbeat and RTT measurement;
+- reconnect;
+- exponential backoff;
+- jitter;
+- circuit breaker;
+- observable connection state.
+
+### Android transport adapters
+
+The Android SDK provides:
+
+- `AndroidKeystoreSigningIdentity`;
+- `AndroidPeerTrustStore`;
+- network permissions required by optional transport use.
+
+The SDK intentionally does not auto-start a permanent Android service.
+
+### Packaging
+
+The repository now publishes two logical modules:
+
+```text
+omni-link-sdk
+omni-link-transport
+```
+
+CI verifies:
+
+```text
+./gradlew build test
+./gradlew publishToMavenLocal
+```
+
+## Implemented in 1.3 and carried forward
+
+### Android identity and trust
+
+- shared first-party signing model;
+- fail-closed same-signer validator;
+- Binder UID/package/signing-certificate identity resolution;
+- signing history support;
+- CORE / FIRST_PARTY / TRUSTED_PARTNER / UNTRUSTED Android trust tiers;
+- partner certificate/capability rules;
+- capability communication direction;
+- data-scope metadata.
+
+### Extension runtime hardening
+
+- single source of SDK/publication version;
+- canonical forward-compatible JSON codec;
+- parse-once execution/audit flow;
+- inline request-size guard;
+- request deadlines;
+- undeclared-capability rejection for explicit manifests;
+- synchronous-call rejection for declared non-IMMEDIATE work;
+- bounded asynchronous concurrency;
+- service coroutine cancellation;
+- bounded event buffering.
+
+### Capability and agent models
+
+- richer capability contracts;
+- capability-graph models;
+- agent task DAG/delegation models;
+- preview/commit confirmation models;
+- external-app bridge descriptors;
+- limited public Omni request contract;
+- task history/replay protocol types.
+
+### Transport-independent session models
 
 `OmniSessionHello` and `OmniFrame` model:
 
-- multiplexed streams,
-- request/result/event frames,
-- ACK credits,
-- cancellation,
-- health pings,
-- control/data/event lanes,
-- codec negotiation,
-- large-payload transport negotiation.
+- streams;
+- request/result/event frames;
+- ACK credits;
+- cancellation;
+- health;
+- control/data/event lanes;
+- codec negotiation;
+- payload-transport negotiation.
 
-The session layer contains no Android classes so the same semantics can later be carried over Binder,
-local sockets, LAN, USB/ADB or desktop transports.
+These are protocol foundations. They are not automatically the same runtime as the 1.4 TCP transport.
 
-## Staged next work
+## Current architectural split
 
-### 1. Actual large-payload Binder path
+```text
+                 Omni capability / task semantics
+                            |
+             +--------------+--------------+
+             |                             |
+      Android Binder IPC             JVM TCP transport
+      same-device trust              device/desktop trust
+             |                             |
+      Android signer/UID             transport key pinning
+             |                             |
+      AccessController               peer ACL / trust ceiling
+             +--------------+--------------+
+                            |
+                      host business logic
+```
 
-The protocol now models FILE_DESCRIPTOR / PIPE / SHARED_MEMORY / CONTENT_URI, but the deployed AIDL
-surface still uses inline JSON.
+The two sides can eventually share more orchestration semantics, but they intentionally use different
+identity mechanisms.
 
-The next transport release should append new AIDL methods rather than mutate existing transaction
-positions. Android implementations should prefer:
+## Still future / incomplete
 
-- inline for small control payloads,
-- ParcelFileDescriptor/pipe for large streams,
-- SharedMemory where supported and appropriate for large immutable data.
+### 1. Large-payload Binder transport
 
-Thresholds must come from benchmarks, not guesses.
+The Android protocol models:
 
-### 2. True cross-process flow control
+- FILE_DESCRIPTOR;
+- PIPE;
+- SHARED_MEMORY;
+- CONTENT_URI.
 
-The current Flow wrapper bounds the client queue, while event replay/sequence numbers enable gap
-recovery.
+The deployed AIDL path still uses inline JSON for ordinary actions.
 
-The session layer already defines credit ACKs. A later Binder/session implementation should make the
-producer stop emitting when the receiver has no credit instead of relying on callback buffering.
+Future work should append compatible Binder methods only after both caller and callee implement the
+large-payload path end to end.
 
-### 3. Persistent reliability layer
+### 2. Automatic large-file TCP streaming
 
-Add a durable outbox/inbox for requests that must survive process death, including:
+The 1.4 TCP runtime supports STREAM_CHUNK messages, but it does not yet provide a complete automatic
+file-transfer/chunk-resume subsystem.
 
-- request ID,
-- idempotency key,
-- attempt number,
-- retry/backoff policy,
-- terminal state,
-- deduplication record.
+Future work may add:
 
-This is especially important for destructive operations where a caller can lose the Binder connection
-after execution but before receiving the result.
+- chunk windows;
+- resume offsets;
+- hashes;
+- transfer IDs;
+- backpressure/credits;
+- integrity/retry policy.
 
-### 4. Transport adapters
+### 3. Durable outbox/inbox
 
-Once the session protocol is stable, add adapters for:
+Reconnect/backoff exists in 1.4.
 
-- Android Binder,
-- local socket,
-- LAN,
-- USB/ADB,
-- desktop companion runtime.
+What does not yet exist is a durable request journal that survives process death and safely deduplicates
+destructive work.
 
-The agent/tool model should not change when transport changes.
+Future persistent reliability should include:
 
-### 5. Benchmarks and regression budgets
+- request id;
+- idempotency key;
+- attempt state;
+- terminal state;
+- deduplication record;
+- replay/recovery policy.
 
-Add instrumentation/macro benchmarks for:
+### 4. Session resumption
 
-- Binder RPC p50/p95/p99,
-- serialization/deserialization,
-- allocations per request,
-- events/sec,
-- reconnect/resume latency,
-- large-payload throughput,
-- memory behavior under sustained streams.
+Every TCP connection currently performs a new authenticated handshake.
 
-CI should eventually fail changes that exceed agreed regression budgets.
+Future resumption may use short-lived resumable tickets without weakening peer pinning or forward
+secrecy expectations.
 
-### 6. Workspace integration
+### 5. Discovery
 
-Protocol support is not runtime support. Workspace must explicitly advertise feature flags only after
-it implements:
+No automatic LAN discovery is enabled in 1.4.
 
-- trust-aware capability graph,
-- task DAG scheduling,
-- preview/commit confirmation,
-- event replay/credit flow,
-- session protocol,
-- large-payload transport,
-- external-app adapter router.
+Possible future discovery adapters:
 
-Until then, corresponding gateway/manifest support flags remain false.
+- Android NSD/mDNS;
+- desktop mDNS;
+- QR/pairing bootstrap;
+- USB/ADB helper discovery.
+
+Discovery must never equal trust.
+
+### 6. Alternative transports
+
+Possible future adapters:
+
+- QUIC;
+- local domain sockets where available;
+- WebSocket/TLS bridge when justified;
+- direct USB protocol.
+
+They should preserve the same trust/capability semantics.
+
+### 7. Hardware-backed attestation
+
+AndroidKeyStore identity is implemented.
+
+Remote verification of hardware-backed key attestation is not yet implemented.
+
+If added later, attestation should strengthen device provenance, not replace user pairing or capability
+policy.
+
+### 8. Strict cross-process flow control
+
+Binder event buffering is bounded and sequence-aware.
+
+Session models include credits.
+
+A fully wired producer-side credit system is still future work.
+
+### 9. Performance benchmark budgets
+
+Add repeatable benchmarks for:
+
+- Binder RPC p50/p95/p99;
+- transport handshake;
+- encrypted message latency;
+- throughput;
+- serialization;
+- allocations;
+- reconnect/resume;
+- event rates;
+- sustained memory;
+- large-stream behavior.
+
+CI can eventually enforce agreed regression budgets.
+
+### 10. Consumer runtime integration
+
+OmniLinkSDK intentionally does not modify Workspace, AndroidIDE, Launcher, Note or other consumer
+repositories.
+
+Consumers still need to implement their own:
+
+- capabilities;
+- Agent Gateway host/client wiring;
+- capability graph ingestion;
+- task DAG scheduling;
+- preview/commit UI;
+- external-app adapters;
+- lifecycle ownership for TCP client/server;
+- public gateway host behavior.
+
+## Integration priority
+
+When consumers start adopting 1.4, recommended order is:
+
+1. signing/trust identity;
+2. semantic capability manifests;
+3. Binder extension integration;
+4. safe Public Gateway behavior;
+5. confirmation/audit policy;
+6. desktop pairing at low privilege;
+7. multiplexed/reliable transport;
+8. capability graph/task DAG runtime;
+9. large payloads;
+10. benchmark-driven tuning.
+
+See [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) for concrete integration examples.
