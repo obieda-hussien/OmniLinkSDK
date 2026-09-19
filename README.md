@@ -4,6 +4,14 @@
 
 OmniLinkSDK is the protocol, trust, IPC and encrypted device-link layer for the Omni ecosystem.
 
+**Copyright © 2026 Abdelrahman Hussein (عبدالرحمن حسين). All rights reserved.**
+
+This repository is **source-available, not open source**. You may study the architecture and independently
+implement similar ideas, but copying, modifying, redistributing, republishing, sublicensing, selling,
+or shipping derivative builds of this source is not permitted except for the limited GitHub-hosted
+rights that apply to public repositories. See [LICENSE](LICENSE), [NOTICE.md](NOTICE.md), and
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
 Version **1.4.0** supports two distinct integration domains:
 
 - same-device Android IPC for first-party Omni apps through Binder/AIDL;
