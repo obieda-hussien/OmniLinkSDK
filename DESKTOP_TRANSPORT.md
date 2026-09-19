@@ -263,3 +263,78 @@ Potential next layers include:
 - circuit breakers and health scoring,
 - large-stream chunking with backpressure,
 - benchmark regression budgets.
+
+
+## Reliability runtime
+
+`OmniReliableClient` is an optional long-lived client supervisor. It does not auto-start on Android.
+
+It provides:
+
+- encrypted application-independent ping/pong health checks,
+- measured round-trip latency,
+- reconnect after process/network loss,
+- exponential backoff with configurable jitter,
+- a circuit breaker after repeated failures,
+- observable `StateFlow<ReliableConnectionState>`,
+- access to the currently active `OmniMultiplexedConnection`.
+
+Reserved transport health controls are only available to authenticated peers and do not grant
+application capabilities.
+
+## Multiplexed RPC
+
+`OmniMultiplexedConnection` places a single reader on each encrypted socket and dispatches:
+
+- concurrent requests,
+- correlated responses,
+- events,
+- stream chunks,
+- transport control messages.
+
+Concurrent sends allocate their encryption sequence number inside the same critical section that writes
+the frame. This prevents two writers from reversing sequence order on the TCP stream.
+
+## USB / ADB tunnels
+
+The wire protocol is ordinary authenticated TCP and does not depend on Wi-Fi.
+
+A developer or future desktop companion can carry it through an ADB tunnel without weakening
+OmniLink authentication.
+
+Desktop connecting to an Android-side server:
+
+```bash
+adb forward tcp:49371 tcp:49371
+```
+
+The desktop client can then connect to:
+
+```text
+127.0.0.1:49371
+```
+
+Android connecting to a desktop-side server can use an ADB reverse tunnel where the device/ADB
+environment supports it:
+
+```bash
+adb reverse tcp:49371 tcp:49371
+```
+
+The ADB tunnel is only transport. OmniLink still performs its normal signed mutual handshake, peer
+pinning, encryption and capability authorization inside that tunnel.
+
+## JitPack multi-module coordinates
+
+JitPack supports multi-module Gradle projects. The repository aggregate can still be consumed with the
+normal repository coordinate, while individual modules can be selected with the repository-qualified
+group and module artifact id.
+
+For consumers that want only the JVM transport, the intended module is:
+
+```text
+com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:<tag>
+```
+
+For Android consumers, use the Android SDK module or repository aggregate according to the published
+JitPack module list for the release.
