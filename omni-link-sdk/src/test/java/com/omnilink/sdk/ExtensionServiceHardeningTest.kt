@@ -57,6 +57,24 @@ class ExtensionServiceHardeningTest {
     }
 
     @Test
+    fun `binder manifest reads outer service metadata without recursive getter`() {
+        val service = Robolectric.buildService(ModernService::class.java).create().bind().get()
+        val binder = service.onBind(Intent()) as IExtensionService
+
+        // This exact Binder call previously recursed into itself indefinitely when the
+        // unqualified Kotlin property resolved the AIDL getter instead of the outer service.
+        val raw = binder.getCapabilityManifest()
+        val manifest = OmniJson.instance.decodeFromString<CapabilityManifest>(raw)
+
+        assertEquals(service.minSupportedVersion, manifest.minSupportedVersion)
+        assertEquals(service.maxSupportedVersion, manifest.maxSupportedVersion)
+        assertEquals(2, manifest.capabilities.size)
+        assertEquals("async_action", manifest.capabilities[0].name)
+        assertEquals("immediate_action", manifest.capabilities[1].name)
+        assertEquals(service.maxInlineRequestBytes, manifest.maxInlinePayloadBytes)
+    }
+
+    @Test
     fun `declared async capability rejects synchronous binder path`() {
         val request = ActionRequest("async_action", buildJsonObject { })
         val outcome = OmniJson.instance.decodeFromString<ActionOutcome>(
