@@ -3,9 +3,11 @@ package com.omnilink.sdk
 import android.content.Context
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import android.system.Os
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileOutputStream
 import java.security.MessageDigest
 
 /**
@@ -21,12 +23,13 @@ object AndroidPayloadBroker {
 
     fun openReadOnly(
         context: Context,
-        descriptor: PayloadDescriptor
+        descriptor: PayloadDescriptor,
+        expectedAuthority: String? = null
     ): ParcelFileDescriptor {
         require(descriptor.transport == PayloadTransport.CONTENT_URI) {
             "openReadOnly requires CONTENT_URI transport"
         }
-        val uri = Uri.parse(requireNotNull(descriptor.uri) { "CONTENT_URI payload is missing uri" })
+        val uri = checkedUri(descriptor, expectedAuthority)
         return requireNotNull(
             context.contentResolver.openFileDescriptor(uri, "r")
         ) { "Unable to open payload URI" }
@@ -36,23 +39,27 @@ object AndroidPayloadBroker {
         context: Context,
         descriptor: PayloadDescriptor,
         destination: File,
-        maxBytes: Long = DEFAULT_MAX_PAYLOAD_BYTES
+        maxBytes: Long = DEFAULT_MAX_PAYLOAD_BYTES,
+        expectedAuthority: String? = null
     ): Long = withContext(Dispatchers.IO) {
         require(descriptor.transport == PayloadTransport.CONTENT_URI) {
             "copyContentUri requires CONTENT_URI transport"
         }
         require(descriptor.lengthBytes in 0..maxBytes) { "Payload size exceeds policy" }
 
-        val uri = Uri.parse(requireNotNull(descriptor.uri) { "CONTENT_URI payload is missing uri" })
+        val uri = checkedUri(descriptor, expectedAuthority)
         val digest = MessageDigest.getInstance("SHA-256")
         var copied = 0L
-        destination.parentFile?.mkdirs()
-        val temp = File(destination.parentFile ?: File("."), destination.name + ".part")
+        val parent = destination.absoluteFile.parentFile ?: error("Destination has no parent")
+        require(parent.isDirectory || parent.mkdirs()) { "Unable to create payload destination directory" }
+        // A unique same-directory temporary file prevents concurrent copies sharing one .part.
+        val temp = File.createTempFile("omnilink-", ".part", parent)
 
         try {
             context.contentResolver.openInputStream(uri).use { input ->
                 requireNotNull(input) { "Unable to open payload URI" }
-                temp.outputStream().buffered(DEFAULT_COPY_BUFFER_BYTES).use { output ->
+                FileOutputStream(temp).use { fileOutput ->
+                    val output = fileOutput.buffered(DEFAULT_COPY_BUFFER_BYTES)
                     val buffer = ByteArray(DEFAULT_COPY_BUFFER_BYTES)
                     while (true) {
                         val read = input.read(buffer)
@@ -64,6 +71,8 @@ object AndroidPayloadBroker {
                         digest.update(buffer, 0, read)
                         output.write(buffer, 0, read)
                     }
+                    output.flush()
+                    fileOutput.fd.sync()
                 }
             }
             require(copied == descriptor.lengthBytes) {
@@ -79,16 +88,25 @@ object AndroidPayloadBroker {
                 }
             }
 
-            if (destination.exists()) destination.delete()
-            if (!temp.renameTo(destination)) {
-                temp.copyTo(destination, overwrite = true)
-                temp.delete()
-            }
+            // POSIX rename in the same directory atomically replaces the old destination.
+            // If it fails, the old file remains intact and the temporary file is removed.
+            Os.rename(temp.absolutePath, destination.absolutePath)
             copied
         } catch (error: Throwable) {
             temp.delete()
             throw error
         }
+    }
+
+    private fun checkedUri(descriptor: PayloadDescriptor, expectedAuthority: String?): Uri {
+        val uri = Uri.parse(requireNotNull(descriptor.uri) { "CONTENT_URI payload is missing uri" })
+        require(uri.scheme == "content" && !uri.isOpaque && !uri.authority.isNullOrBlank()) {
+            "Payload must use a hierarchical content URI with a provider authority"
+        }
+        require(expectedAuthority == null || uri.authority == expectedAuthority) {
+            "Payload URI authority does not match the approved provider"
+        }
+        return uri
     }
 }
 
