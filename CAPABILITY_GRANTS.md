@@ -2,8 +2,9 @@
 
 `CapabilityGrantLedger` evaluates a grant only for an exact requester identity, provider identity,
 capability, resource scope, purpose, data scope, and risk. Callers must rebuild both principals from
-current local identity verification for every authorization check. A package name supplied by a
-request is not a `GrantPrincipal`.
+current local identity verification for every authorization check. The ledger data model does not
+authenticate identities; the host must construct principals from installed package signer facts and
+must never construct them from request JSON.
 
 ## Decisions
 

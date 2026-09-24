@@ -187,17 +187,4 @@ class CapabilityGrantLedgerTest {
         assertEquals("no_matching_grant", (ledger.authorize(issued) as CapabilityAuthorization.Denied).reason)
     }
 
-    @Test
-    fun `grant principal factory rejects unverified classifications`() {
-        val unknown = ResolvedAppIdentity(
-            packageName = "com.example.app",
-            uid = 123,
-            classification = AppClassification.UNKNOWN_APP,
-            currentSignerSha256 = setOf("c".repeat(64)),
-            cryptographicIdentityMatched = false
-        )
-
-        val accepted = runCatching { GrantPrincipal.from(unknown) }.isSuccess
-        assertFalse(accepted)
-    }
 }

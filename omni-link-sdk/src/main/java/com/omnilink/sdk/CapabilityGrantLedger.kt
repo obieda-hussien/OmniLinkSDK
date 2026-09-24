@@ -41,19 +41,6 @@ data class GrantPrincipal(
 
     companion object {
         const val MAX_SIGNER_COUNT = 8
-
-        /** Only use locally verified identities; package names from requests are not identities. */
-        fun from(identity: ResolvedAppIdentity): GrantPrincipal {
-            require(identity.cryptographicIdentityMatched) { "identity has no verified signer match" }
-            require(identity.classification in setOf(
-                AppClassification.OMNI_CORE,
-                AppClassification.OFFICIAL_OMNI_APP,
-                AppClassification.VERIFIED_PARTNER,
-                AppClassification.USER_APPROVED_APP
-            )) { "identity classification cannot receive capability grants" }
-            require(identity.currentSignerSha256.isNotEmpty()) { "identity has no current signer" }
-            return GrantPrincipal(identity.packageName, identity.currentSignerSha256).canonical()
-        }
     }
 }
 
@@ -309,6 +296,7 @@ enum class GrantMutationResult {
     RECORDED,
     REQUIRES_DURABLE_STORAGE,
     INVALID_REQUEST,
+    LIMIT_REACHED,
     STORAGE_UNAVAILABLE
 }
 
