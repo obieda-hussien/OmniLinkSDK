@@ -1,4 +1,4 @@
-# OmniLink 2.0 — Desktop / Device Transport
+# OmniLink 2.x — Desktop / Device Transport
 
 OmniLink 2.0 adds a real cross-platform transport implementation without changing any consuming Omni
 application.

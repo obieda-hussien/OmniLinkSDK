@@ -1,4 +1,4 @@
-# OmniLinkSDK 2.0
+# OmniLinkSDK 2.x
 
 [![](https://jitpack.io/v/obieda-hussien/OmniLinkSDK.svg)](https://jitpack.io/#obieda-hussien/OmniLinkSDK)
 
@@ -12,7 +12,9 @@ or shipping derivative builds of this source is not permitted except for the lim
 rights that apply to public repositories. See [LICENSE](LICENSE), [NOTICE.md](NOTICE.md), and
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Version **2.0.1** retains the 2.0 public and privileged integration boundaries and fixes the Binder capability-manifest getter:
+Version **2.1.0** is the current source version (unreleased until the tag and artifact are verified).
+The latest verified release for consumer installation is **v2.0.1**. The modules retain their
+existing trust boundaries:
 
 - `omni-link-public`: narrow Ask/Share/Open contracts for unknown or third-party Android apps;
 - `omni-link-sdk`: trusted Android Binder/AIDL, provider verification and large-payload adapters;
@@ -25,10 +27,16 @@ receiving host from Android signing identity, pinned transport identity and expl
 The version source of truth is:
 
 ```properties
-OMNILINK_VERSION=2.0.1
+OMNILINK_VERSION=2.1.0
 ```
 
 in `gradle.properties`.
+
+The 2.1.0 source adds transfer and session hardening, host-controlled app identity classification,
+scoped grants, route planning and an opt-in external-app executor. See [CHANGELOG.md](CHANGELOG.md)
+and [AUTHORIZED_EXTERNAL_EXECUTION.md](AUTHORIZED_EXTERNAL_EXECUTION.md). OmniLink 3.0 still needs
+host consent UI and actual Workspace integration. The installation examples below use the published
+`v2.0.1` artifact until a new release is verified.
 
 ## Read this first
 

@@ -4,6 +4,29 @@ All notable OmniLinkSDK changes are documented here.
 
 The repository version is sourced from `OMNILINK_VERSION` in `gradle.properties`.
 
+## 2.1.0 (unreleased; pending PR merge and release verification)
+
+### Security and capability foundations
+
+- Bound file transfers to validated transfer IDs and authenticated peers; preserve committed files
+  when a replacement or Android Content URI copy fails.
+- Enforced live TCP peer revocation, bounded request queues, restartable client supervision, and
+  host-pinned transport keys for FIRST_PARTY promotion.
+- Added host-controlled installed-app identity classification, exact-scope capability grants with
+  encrypted Android persistence, expiry, single-use consumption and revocation notifications.
+- Added external-app route planning and an opt-in executor that verifies current identities,
+  confirmation and an exact grant before invoking one host-owned adapter.
+- Added regression tests for transfer isolation, trust revocation, grant policy and route execution.
+
+### Compatibility and release status
+
+- This is an additive SDK/API update; Binder protocol 5, transport wire protocol 2 and AIDL method
+  order remain unchanged.
+- The new execution boundary is opt-in. Workspace integration, host consent UI, permission checks
+  inside adapters and in-flight revocation remain consumer work.
+- OmniLink 3.0 is not complete or released. Keep consumers on published `v2.0.1` until a `v2.1.0`
+  tag, release and JitPack artifact are verified; update and test each consuming APK separately.
+
 ## 2.0.1
 
 ### Android Binder crash fix

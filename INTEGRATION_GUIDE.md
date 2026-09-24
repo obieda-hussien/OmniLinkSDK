@@ -1,6 +1,6 @@
-# OmniLinkSDK 2.0 Integration Guide
+# OmniLinkSDK 2.x Integration Guide
 
-This is the canonical consumer guide for OmniLinkSDK 2.0. Read this before adding OmniLink to any
+This is the canonical consumer guide for OmniLinkSDK 2.x. Read this before adding OmniLink to any
 Android app, trusted partner, third-party app, desktop companion, test tool, or external-app bridge.
 
 OmniLink has several integration surfaces. They are intentionally different. Do not choose a surface
@@ -36,15 +36,20 @@ Do not expose the privileged Agent Gateway to an unknown app just because that a
 
 ---
 
-## 2. Version 2.0 artifacts
+## 2. Published 2.0.1 artifacts and upcoming 2.1.0 source
 
 The source version is defined only by:
 
 ```properties
-OMNILINK_VERSION=2.0.1
+OMNILINK_VERSION=2.1.0
 ```
 
 in `gradle.properties`.
+
+The repository is preparing `v2.1.0`; the examples below intentionally use the latest verified
+release, `v2.0.1`. Do not change consuming apps to `v2.1.0` until the release tag and artifact are
+verified. The 2.1.0 opt-in external execution boundary is described in
+[AUTHORIZED_EXTERNAL_EXECUTION.md](AUTHORIZED_EXTERNAL_EXECUTION.md).
 
 JitPack multi-module projects publish individual modules under
 `com.github.USER.REPO:MODULE:VERSION`.
@@ -843,8 +848,10 @@ Why this order?
 A semantic API is more stable, more precise and lower privilege than screen automation or shell
 control.
 
-`ExternalAppBridgeProtocol.kt` currently defines routing descriptors and decisions. It does not
-silently install an Accessibility service, Shizuku bridge or root daemon for a consuming app.
+`ExternalAppBridgeProtocol.kt` defines routing descriptors and decisions. The 2.1.0 source also
+offers `AuthorizedExternalAppExecutor` to enforce exact grants and host-confirmed execution for
+host-owned adapters. Neither component installs an Accessibility service, Shizuku bridge or root
+daemon for a consuming app. The host must verify adapter permissions before executing.
 
 ---
 
@@ -876,8 +883,10 @@ Default maximum encrypted frame:
 The binary message codec permits a larger logical payload than that, but the session frame limit is the
 effective default.
 
-For larger data, split it into application-level `STREAM_CHUNK` messages or use a dedicated file
-transfer mechanism. OmniLink 2.0 does not yet provide an automatic large-file chunker.
+For larger files use `OmniFileTransferSender` and `OmniFileTransferReceiver` with authenticated peers
+and explicit `_transfer.*` capability ACLs. These support bounded chunks and resume offsets; the
+host still owns transfer lifecycle, storage and user policy. Other application payloads may use
+application-level `STREAM_CHUNK` messages.
 
 ## 26. Request identifiers and idempotency
 

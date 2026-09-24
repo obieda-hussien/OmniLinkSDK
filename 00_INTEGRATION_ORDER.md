@@ -1,4 +1,4 @@
-# OmniLinkSDK 2.0 — Integration Order
+# OmniLinkSDK 2.x — Integration Order
 
 This filename is retained for compatibility with older planning links. The old prompt index and
 consumer-specific phase list are retired.
@@ -97,7 +97,9 @@ For the 2.0.1 Binder crash fix:
 4. Update Workspace, AndroidIDE, and any CI staging scripts to `v2.0.1` in separate consumer changes.
 5. Rebuild and test the actual installed Android APKs. An APK still using `v2.0.0` remains affected.
 
-The 3.0 architecture and security work belongs in separate pull requests.
+The 2.1.0 source version includes security and policy foundations plus an opt-in external executor.
+Keep consumer dependency examples on published `v2.0.1` until the new release is verified. OmniLink
+3.0 architecture, consent UI and Workspace integration still require separate work.
 
 ## Canonical documentation
 

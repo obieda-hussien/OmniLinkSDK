@@ -17,4 +17,5 @@ The host still owns the permission prompt, adapter implementation, Android permi
 execution audit, and error reporting. In-flight operations must cooperate with cancellation and
 check revocation at their own irreversible commit point; this class checks a grant before entry,
 not during the adapter's work. This API does not automatically wire into `ExtensionService` or
-Omni Dev Workspace yet, and it does not change the released 2.0.1 artifact.
+Omni Dev Workspace yet. It is part of the upcoming 2.1.0 source; the latest verified artifact
+remains 2.0.1 until release validation.

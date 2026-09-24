@@ -1,10 +1,10 @@
-# OmniLinkSDK 2.0 — Maintainer / Coding-Agent Instructions
+# OmniLinkSDK 2.x — Maintainer / Coding-Agent Instructions
 
 This filename is retained because older planning material linked to it. It is no longer a speculative
 "build OmniLink from scratch" prompt.
 
 It now describes the invariants a coding agent or maintainer must preserve when changing OmniLinkSDK
-2.0 or preparing a later release.
+2.x or preparing a later release.
 
 For consumer integration, read [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md).
 
@@ -23,7 +23,7 @@ OmniLinkSDK
 Version source:
 
 ```properties
-OMNILINK_VERSION=2.0.1
+OMNILINK_VERSION=2.1.0
 ```
 
 Binder wire version:

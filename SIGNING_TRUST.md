@@ -1,4 +1,4 @@
-# OmniLink 2.0 — Signing & Trust Model
+# OmniLink 2.x — Signing & Trust Model
 
 ## Goal
 
