@@ -585,7 +585,11 @@ class CapabilityGrantLedger(
 
     private fun notifyRevoked(ids: Set<String>) {
         if (ids.isEmpty()) return
-        revocationListeners.forEach { listener -> runCatching { listener(ids) } }
+        val listeners = revocationListeners.iterator()
+        while (listeners.hasNext()) {
+            val listener = listeners.next()
+            runCatching { listener(ids) }
+        }
     }
 
     private fun CapabilityGrantSnapshot.canonical() = copy(
