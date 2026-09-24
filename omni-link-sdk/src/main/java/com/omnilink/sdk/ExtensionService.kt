@@ -267,7 +267,9 @@ abstract class ExtensionService : Service() {
 
     private val binder = object : IExtensionService.Stub() {
         override fun getCapabilityManifest(): String =
-            OmniJson.instance.encodeToString(capabilityManifest)
+            // Explicitly access the enclosing service: an unqualified name resolves to
+            // the AIDL Stub's synthetic getCapabilityManifest() property and recurses.
+            OmniJson.instance.encodeToString(this@ExtensionService.capabilityManifest)
 
         override fun executeAction(protocolVersion: Int, requestJson: String): String {
             val outcome = executeSync(protocolVersion, requestJson, resolveCaller())
