@@ -1,4 +1,4 @@
-# OmniLink 2.0 — Trust Mesh, Capability Graph and Device Trust
+# OmniLink 3.0 — Trust Mesh, Capability Graph and Device Trust
 
 ## Design objective
 

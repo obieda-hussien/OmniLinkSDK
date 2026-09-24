@@ -1,4 +1,4 @@
-# OmniLinkSDK 2.0 — Integration Order
+# OmniLinkSDK 3.0 — Integration Order
 
 This filename is retained for compatibility with older planning links. The old prompt index and
 consumer-specific phase list are retired.
@@ -20,10 +20,10 @@ For API examples and detailed integration patterns, use
 ## First-party Android rollout
 
 1. Configure the shared Omni debug and release signing identities.
-2. Add the 2.0 Android module:
+2. Add the 3.0 Android module after the release artifact is verified:
    ```kotlin
    implementation(
-       "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v2.0.1"
+       "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v3.0.0"
    )
    ```
 3. Decide whether the app is an extension provider, caller, Agent Gateway client, or several of these.
@@ -49,7 +49,7 @@ If structured bidirectional communication is needed, use the pure transport modu
 
 ```kotlin
 implementation(
-    "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v2.0.1"
+    "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v3.0.0"
 )
 ```
 
@@ -87,17 +87,13 @@ that ceiling inside the transport policy even if a stored ACL accidentally conta
 8. Test peer-key mismatch, network loss, reconnect, heartbeat timeout and concurrent requests.
 9. Treat LAN membership and ADB connectivity as transport only, never as trust.
 
-## OmniLink release order
+## OmniLink 3.0 release order
 
-For the 2.0.1 Binder crash fix:
-
-1. Confirm the Binder getter and repeated-call regression tests pass in CI.
-2. Merge the focused fix into `main`; the release workflow then builds and publishes `v2.0.1`.
-3. Verify the release tag and JitPack artifacts correspond to the merged commit.
-4. Update Workspace, AndroidIDE, and any CI staging scripts to `v2.0.1` in separate consumer changes.
-5. Rebuild and test the actual installed Android APKs. An APK still using `v2.0.0` remains affected.
-
-The 3.0 architecture and security work belongs in separate pull requests.
+1. Pass Android/JVM tests, Maven publication, CodeQL and dependency review on the integrated PR.
+2. Merge the reviewed SDK PR into `main`; the release workflow creates `v3.0.0` from the merged commit.
+3. Verify the exact tag SHA, GitHub release and all JitPack module artifacts.
+4. Update Workspace, AndroidIDE and CI staging scripts in separate consumer PRs.
+5. Build and test actual APKs. The SDK does not automatically install its host consent UI or adapters.
 
 ## Canonical documentation
 

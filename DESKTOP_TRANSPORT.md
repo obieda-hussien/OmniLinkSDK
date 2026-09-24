@@ -1,4 +1,4 @@
-# OmniLink 2.0 — Desktop / Device Transport
+# OmniLink 3.0 — Desktop / Device Transport
 
 OmniLink 2.0 adds a real cross-platform transport implementation without changing any consuming Omni
 application.
@@ -349,7 +349,7 @@ For consumers that want only the JVM transport:
 
 ```kotlin
 implementation(
-    "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v2.0.1"
+    "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v3.0.0"
 )
 ```
 
@@ -357,14 +357,14 @@ For first-party Android consumers:
 
 ```kotlin
 implementation(
-    "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v2.0.1"
+    "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v3.0.0"
 )
 ```
 
 The repository aggregate remains:
 
 ```kotlin
-implementation("com.github.obieda-hussien:OmniLinkSDK:v2.0.1")
+implementation("com.github.obieda-hussien:OmniLinkSDK:v3.0.0")
 ```
 
 Prefer the exact module when you do not need the full repository surface.

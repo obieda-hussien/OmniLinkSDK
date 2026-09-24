@@ -1,4 +1,4 @@
-# OmniLinkSDK 2.0
+# OmniLinkSDK 3.0
 
 [![](https://jitpack.io/v/obieda-hussien/OmniLinkSDK.svg)](https://jitpack.io/#obieda-hussien/OmniLinkSDK)
 
@@ -12,7 +12,9 @@ or shipping derivative builds of this source is not permitted except for the lim
 rights that apply to public repositories. See [LICENSE](LICENSE), [NOTICE.md](NOTICE.md), and
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Version **2.0.1** retains the 2.0 public and privileged integration boundaries and fixes the Binder capability-manifest getter:
+Version **3.0.0** is the source version prepared for release. Consumers should verify that the
+`v3.0.0` tag, GitHub release and JitPack modules exist before updating their builds. The modules
+retain distinct trust boundaries:
 
 - `omni-link-public`: narrow Ask/Share/Open contracts for unknown or third-party Android apps;
 - `omni-link-sdk`: trusted Android Binder/AIDL, provider verification and large-payload adapters;
@@ -25,10 +27,16 @@ receiving host from Android signing identity, pinned transport identity and expl
 The version source of truth is:
 
 ```properties
-OMNILINK_VERSION=2.0.1
+OMNILINK_VERSION=3.0.0
 ```
 
 in `gradle.properties`.
+
+Version 3.0 adds hardened transfer/session handling, host-controlled Android identity and Binder
+capability discovery, exact-scope grants, a consent coordinator and an opt-in external-app executor.
+See [CHANGELOG.md](CHANGELOG.md) and [AUTHORIZED_EXTERNAL_EXECUTION.md](AUTHORIZED_EXTERNAL_EXECUTION.md).
+Workspace still needs to integrate these APIs and provide its real consent UI and adapters. The
+installation examples below target `v3.0.0` after its publication is verified.
 
 ## Read this first
 
@@ -69,6 +77,8 @@ Contains:
 - public gateway models;
 - external-app bridge models;
 - capability graph / task DAG / preview-commit protocol types;
+- verified installed-app identities, scoped grants, consent and Binder capability discovery;
+- opt-in authorized external-app execution with host-owned adapters;
 - AndroidKeyStore transport identity adapter;
 - Android peer-trust persistence;
 - `omni-link-transport` as an API dependency.
@@ -111,7 +121,7 @@ dependencyResolutionManagement {
 ```kotlin
 dependencies {
     implementation(
-        "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v2.0.1"
+        "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v3.0.0"
     )
 }
 ```
@@ -121,16 +131,26 @@ dependencies {
 ```kotlin
 dependencies {
     implementation(
-        "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v2.0.1"
+        "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v3.0.0"
     )
 }
 ```
+
+### Ordinary third-party Android app
+
+```kotlin
+dependencies {
+    implementation("com.github.obieda-hussien.OmniLinkSDK:omni-link-public:v3.0.0")
+}
+```
+
+The public module exposes bounded entry points; it does not include the privileged Android SDK.
 
 ### All repository modules
 
 ```kotlin
 dependencies {
-    implementation("com.github.obieda-hussien:OmniLinkSDK:v2.0.1")
+    implementation("com.github.obieda-hussien:OmniLinkSDK:v3.0.0")
 }
 ```
 

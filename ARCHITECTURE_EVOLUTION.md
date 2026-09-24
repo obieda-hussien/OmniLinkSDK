@@ -6,6 +6,19 @@ Do not advertise a feature as available merely because a model class exists.
 
 ## Implemented runtime foundations
 
+### Android identity, consent and capability discovery in 3.0
+
+- `HostVerifiedAppPairResolver` re-reads current installed APK signers for each operation;
+- `CapabilityGrantLedger` persists exact grants and handles expiry and revocation;
+- `CapabilityConsentCoordinator` provides exact prompt details for a host-owned user UI;
+- `TrustedCapabilityDiscovery` binds verified components, bounds manifest reads and rechecks
+  provider identity after receiving a reply;
+- `AuthorizedExternalAppExecutor` combines host route policy with current identity, confirmation
+  and an exact grant before invoking one host-owned adapter.
+
+The SDK provides enforcement primitives; installed Workspace and AndroidIDE APKs must still consume
+them, implement their own capabilities and UI, and be rebuilt and tested separately.
+
 ### Real desktop/JVM transport
 
 The pure JVM `omni-link-transport` module now provides:
@@ -122,9 +135,11 @@ provider are not evidence. Permission denial and unknown authorization stop rout
 an unavailable authorized route can fall through to another candidate. Consent and destructive
 routes are returned with `requiresConfirmation` set.
 
-This planner does not discover or probe adapters, verify host grants, request user consent, or execute
-operations. Integrators must do those steps at their enforcement boundary. In particular, a selected
-route is not authorization to perform it.
+The planner alone does not discover or probe adapters, verify host grants, request user consent, or
+execute operations. The opt-in `AuthorizedExternalAppExecutor` in the 3.0 source
+combines a host-verified identity resolver, the grant ledger, a host confirmation callback and one
+host-owned adapter. It does not implement the consent UI or the adapter's own Android permission
+checks. A selected route alone is never authorization to perform it.
 
 ### Transport-independent session models
 
@@ -178,19 +193,17 @@ The deployed AIDL path still uses inline JSON for ordinary actions.
 Future work should append compatible Binder methods only after both caller and callee implement the
 large-payload path end to end.
 
-### 2. Automatic large-file TCP streaming
+### 2. Resumable TCP file transfers
 
-The 1.4 TCP runtime supports STREAM_CHUNK messages, but it does not yet provide a complete automatic
-file-transfer/chunk-resume subsystem.
+`OmniFileTransferSender` and `OmniFileTransferReceiver` provide bounded chunk transfers, resume
+offsets, per-chunk hashes and final SHA-256 validation under explicit `_transfer.*` ACLs. Hosts
+still provide lifecycle, storage management and policy for individual transfers.
 
 Future work may add:
 
-- chunk windows;
-- resume offsets;
-- hashes;
-- transfer IDs;
-- backpressure/credits;
-- integrity/retry policy.
+- concurrent chunk windows and negotiated backpressure credits;
+- durable transfer garbage collection across process death;
+- end-to-end retry policy for interrupted destructive operations.
 
 ### 3. Durable outbox/inbox
 

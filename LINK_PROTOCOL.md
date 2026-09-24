@@ -1,6 +1,6 @@
-# OmniLink 2.0 Protocol Rules
+# OmniLink 3.0 Protocol Rules
 
-This document is the canonical behavior contract for the Android/Binder side of OmniLink 2.0.
+This document is the canonical behavior contract for the Android/Binder side of OmniLink 3.0.
 
 For "which surface should I use?" start with
 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md).
@@ -16,10 +16,10 @@ capability, every data scope, or every destructive action.
 
 ## Protocol vs SDK version
 
-Current SDK release:
+Current SDK source version (verify publication before consumption):
 
 ```text
-2.0.1
+3.0.0
 ```
 
 Current Android Binder protocol:
