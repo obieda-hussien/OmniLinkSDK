@@ -70,9 +70,18 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Ordinary maintenance may update release.yml while the source version is unchanged.
-          # An already-published release is therefore a clean no-op, not an error.
+          # An existing release is safe to reuse only when its immutable tag points
+          # at the exact source commit this workflow intends to publish.
           if gh release view "$TAG" >/dev/null 2>&1; then
+            if ! git rev-parse -q --verify "refs/tags/$TAG^{commit}" >/dev/null; then
+              echo "::error::Release $TAG exists but its tag cannot be resolved."
+              exit 1
+            fi
+            TAG_COMMIT="$(git rev-parse "refs/tags/$TAG^{commit}")"
+            if [[ "$TAG_COMMIT" != "$GITHUB_SHA" ]]; then
+              echo "::error::Release $TAG points at $TAG_COMMIT, expected $GITHUB_SHA. Bump OMNILINK_VERSION for a new release."
+              exit 1
+            fi
             echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "Release $TAG already exists; skipping tag/release creation."
             exit 0

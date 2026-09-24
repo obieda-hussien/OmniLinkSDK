@@ -19,13 +19,13 @@ capability, every data scope, or every destructive action.
 Current SDK release:
 
 ```text
-2.0.0
+2.0.1
 ```
 
 Current Android Binder protocol:
 
 ```text
-CURRENT_PROTOCOL_VERSION = 4
+CURRENT_PROTOCOL_VERSION = 5
 ```
 
 These versions serve different purposes.

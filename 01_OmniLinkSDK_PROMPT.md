@@ -4,7 +4,7 @@ This filename is retained because older planning material linked to it. It is no
 "build OmniLink from scratch" prompt.
 
 It now describes the invariants a coding agent or maintainer must preserve when changing OmniLinkSDK
-1.4 or preparing a later release.
+2.0 or preparing a later release.
 
 For consumer integration, read [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md).
 
@@ -14,20 +14,22 @@ For consumer integration, read [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md).
 OmniLinkSDK
 ├── omni-link-sdk
 │   └── Android AAR / Binder / trust / Android adapters
-└── omni-link-transport
-    └── pure JVM encrypted transport
+├── omni-link-transport
+│   └── pure JVM encrypted transport
+└── omni-link-public
+    └── restricted third-party request API
 ```
 
 Version source:
 
 ```properties
-OMNILINK_VERSION=2.0.0
+OMNILINK_VERSION=2.0.1
 ```
 
 Binder wire version:
 
 ```text
-CURRENT_PROTOCOL_VERSION = 4
+CURRENT_PROTOCOL_VERSION = 5
 ```
 
 Transport protocol version is independent from the Binder protocol version.
