@@ -4,11 +4,48 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.net.InetAddress
 
 class OmniTcpTransportTest {
+
+    @Test
+    fun `removing or changing peer trust closes already authenticated sessions`() = runBlocking {
+        val serverIdentity = JvmEcSigningIdentity.generate("revocation-server", PeerRole.SERVICE)
+        val clientIdentity = JvmEcSigningIdentity.generate("revocation-client", PeerRole.DESKTOP)
+        val serverRecord = PeerTrustRecord(
+            clientIdentity.peerId, clientIdentity.publicKeySha256(),
+            TransportTrustLevel.FIRST_PARTY,
+            inboundCapabilities = setOf("chat.*"), outboundCapabilities = setOf("chat.*")
+        )
+        val clientRecord = PeerTrustRecord(
+            serverIdentity.peerId, serverIdentity.publicKeySha256(),
+            TransportTrustLevel.FIRST_PARTY,
+            inboundCapabilities = setOf("chat.*"), outboundCapabilities = setOf("chat.*")
+        )
+        val serverTrust = InMemoryPeerTrustStore(listOf(serverRecord))
+        val clientTrust = InMemoryPeerTrustStore(listOf(clientRecord))
+        val captured = CompletableDeferred<SecureTransportSession>()
+        val finish = CompletableDeferred<Unit>()
+        val server = OmniTcpServer(serverIdentity, serverTrust,
+            bindAddress = InetAddress.getLoopbackAddress(), port = 0)
+        server.start(onSession = { session -> captured.complete(session); finish.await() })
+        val client = OmniTcpClient.connect("127.0.0.1", server.localPort, clientIdentity, clientTrust)
+        val serverSession = withTimeout(5_000) { captured.await() }
+
+        assertTrue(serverSession.isOpen)
+        serverTrust.remove(clientIdentity.peerId)
+        assertFalse(serverSession.isOpen)
+        assertTrue(client.isOpen)
+
+        clientTrust.put(clientRecord.copy(outboundCapabilities = emptySet()))
+        assertFalse(client.isOpen)
+        finish.complete(Unit)
+        client.close()
+        server.close()
+    }
 
     @Test
     fun `trusted peers exchange encrypted capability-scoped messages bidirectionally`() = runBlocking {

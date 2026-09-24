@@ -1,8 +1,10 @@
 package com.omnilink.transport
 
 import kotlinx.serialization.Serializable
+import java.io.Closeable
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArraySet
 
 @Serializable
 data class PeerTrustRecord(
@@ -90,10 +92,33 @@ interface PeerTrustStore {
     fun all(): List<PeerTrustRecord>
 }
 
+/** Implemented by stores that can close active sessions as soon as trust changes. */
+interface SessionTrustStore : PeerTrustStore {
+    fun onPeerChanged(peerId: String, callback: () -> Unit): Closeable
+}
+
+private class SessionListeners {
+    private val callbacks = ConcurrentHashMap<String, CopyOnWriteArraySet<() -> Unit>>()
+
+    fun subscribe(peerId: String, callback: () -> Unit): Closeable {
+        val set = callbacks.computeIfAbsent(peerId) { CopyOnWriteArraySet() }
+        set.add(callback)
+        return Closeable {
+            set.remove(callback)
+            if (set.isEmpty()) callbacks.remove(peerId, set)
+        }
+    }
+
+    fun changed(peerId: String) {
+        callbacks[peerId]?.forEach { it() }
+    }
+}
+
 class InMemoryPeerTrustStore(
     records: Collection<PeerTrustRecord> = emptyList()
-) : PeerTrustStore {
+) : SessionTrustStore {
     private val records = ConcurrentHashMap<String, PeerTrustRecord>()
+    private val sessions = SessionListeners()
 
     init {
         records.forEach(::put)
@@ -102,24 +127,30 @@ class InMemoryPeerTrustStore(
     override fun get(peerId: String): PeerTrustRecord? = records[peerId]
 
     override fun put(record: PeerTrustRecord) {
-        records[record.peerId] = record.copy(
+        val normalized = record.copy(
             publicKeySha256 = normalizeFingerprint(record.publicKeySha256),
             expectedPlatformSignerSha256 =
                 record.expectedPlatformSignerSha256.map(::normalizeFingerprint).toSet()
         )
+        val previous = records.put(record.peerId, normalized)
+        if (previous != null && previous != normalized) sessions.changed(record.peerId)
     }
 
     override fun remove(peerId: String) {
-        records.remove(peerId)
+        if (records.remove(peerId) != null) sessions.changed(peerId)
     }
 
     override fun all(): List<PeerTrustRecord> = records.values.sortedBy { it.peerId }
+
+    override fun onPeerChanged(peerId: String, callback: () -> Unit): Closeable =
+        sessions.subscribe(peerId, callback)
 }
 
 class JsonFilePeerTrustStore(
     private val file: File
-) : PeerTrustStore {
+) : SessionTrustStore {
     private val lock = Any()
+    private val sessions = SessionListeners()
 
     @Serializable
     private data class State(val records: List<PeerTrustRecord> = emptyList())
@@ -130,21 +161,30 @@ class JsonFilePeerTrustStore(
 
     override fun put(record: PeerTrustRecord) = synchronized(lock) {
         val current = readState().records.associateBy { it.peerId }.toMutableMap()
-        current[record.peerId] = record.copy(
+        val normalized = record.copy(
             publicKeySha256 = normalizeFingerprint(record.publicKeySha256),
             expectedPlatformSignerSha256 =
                 record.expectedPlatformSignerSha256.map(::normalizeFingerprint).toSet()
         )
+        val previous = current.put(record.peerId, normalized)
         writeState(State(current.values.sortedBy { it.peerId }))
+        if (previous != null && previous != normalized) sessions.changed(record.peerId)
     }
 
     override fun remove(peerId: String) = synchronized(lock) {
-        writeState(State(readState().records.filterNot { it.peerId == peerId }))
+        val current = readState().records
+        if (current.any { it.peerId == peerId }) {
+            writeState(State(current.filterNot { it.peerId == peerId }))
+            sessions.changed(peerId)
+        }
     }
 
     override fun all(): List<PeerTrustRecord> = synchronized(lock) {
         readState().records.sortedBy { it.peerId }
     }
+
+    override fun onPeerChanged(peerId: String, callback: () -> Unit): Closeable =
+        sessions.subscribe(peerId, callback)
 
     private fun readState(): State {
         if (!file.exists()) return State()
