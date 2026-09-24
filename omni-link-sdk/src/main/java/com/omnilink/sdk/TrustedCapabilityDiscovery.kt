@@ -35,7 +35,9 @@ class TrustedCapabilityDiscovery(context: Context) {
         require(timeoutMillis in 1..30_000)
         val query = withContext(Dispatchers.IO) { resolver.query(policy) }
         val failures = linkedMapOf<String, String>()
-        query.rejected.forEach { failures["${it.packageName}/${it.serviceClassName}"] = it.reason }
+        for (rejected in query.rejected) {
+            failures["${rejected.packageName}/${rejected.serviceClassName}"] = rejected.reason
+        }
         val nodes = mutableListOf<CapabilityGraphNode>()
         for (service in query.verified.distinctBy { it.component }.take(MAX_SERVICES)) {
             val key = "${service.packageName}/${service.serviceClassName}"

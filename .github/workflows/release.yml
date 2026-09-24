@@ -124,6 +124,11 @@ jobs:
             --title "OmniLinkSDK $TAG" \
             --generate-notes
 
+      - name: Verify JitPack Android and JVM artifacts
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: bash scripts/verify_jitpack_release.sh "$TAG"
+
       - name: Release summary
         run: |
           {

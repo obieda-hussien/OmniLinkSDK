@@ -4,7 +4,7 @@ All notable OmniLinkSDK changes are documented here.
 
 The repository version is sourced from `OMNILINK_VERSION` in `gradle.properties`.
 
-## 2.1.0 (unreleased; pending PR merge and release verification)
+## 3.0.0 (release candidate; verify tag and published artifacts after merge)
 
 ### Security and capability foundations
 
@@ -16,16 +16,21 @@ The repository version is sourced from `OMNILINK_VERSION` in `gradle.properties`
   encrypted Android persistence, expiry, single-use consumption and revocation notifications.
 - Added external-app route planning and an opt-in executor that verifies current identities,
   confirmation and an exact grant before invoking one host-owned adapter.
+- Added Android installed-app identity resolution for current APK signers, host-driven scoped consent,
+  and bounded discovery of policy-verified Binder services and capability manifests.
+- Pinned Android service providers now require a current installed signer; a past signing-history
+  certificate alone cannot retain privileged binding after key rotation. Hosts must approve the
+  new signer explicitly.
 - Added regression tests for transfer isolation, trust revocation, grant policy and route execution.
 
 ### Compatibility and release status
 
-- This is an additive SDK/API update; Binder protocol 5, transport wire protocol 2 and AIDL method
-  order remain unchanged.
-- The new execution boundary is opt-in. Workspace integration, host consent UI, permission checks
-  inside adapters and in-flight revocation remain consumer work.
-- OmniLink 3.0 is not complete or released. Keep consumers on published `v2.0.1` until a `v2.1.0`
-  tag, release and JitPack artifact are verified; update and test each consuming APK separately.
+- Binder protocol 5, transport wire protocol 2 and AIDL method order remain unchanged. The major
+  version reflects stricter trust policy and the new host-facing authorization/discovery API.
+- The execution boundary is opt-in. Workspace integration, a real host consent UI, Android
+  permission checks inside adapters and in-flight revocation at commit remain consumer work.
+- Do not update consumers until the `v3.0.0` tag, GitHub release and JitPack modules are verified;
+  rebuild and test each installed APK separately.
 
 ## 2.0.1
 

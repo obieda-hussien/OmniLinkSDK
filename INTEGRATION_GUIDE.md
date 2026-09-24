@@ -1,6 +1,6 @@
-# OmniLinkSDK 2.x Integration Guide
+# OmniLinkSDK 3.0 Integration Guide
 
-This is the canonical consumer guide for OmniLinkSDK 2.x. Read this before adding OmniLink to any
+This is the canonical consumer guide for OmniLinkSDK 3.0. Read this before adding OmniLink to any
 Android app, trusted partner, third-party app, desktop companion, test tool, or external-app bridge.
 
 OmniLink has several integration surfaces. They are intentionally different. Do not choose a surface
@@ -36,19 +36,18 @@ Do not expose the privileged Agent Gateway to an unknown app just because that a
 
 ---
 
-## 2. Published 2.0.1 artifacts and upcoming 2.1.0 source
+## 2. Version 3.0 artifacts
 
 The source version is defined only by:
 
 ```properties
-OMNILINK_VERSION=2.1.0
+OMNILINK_VERSION=3.0.0
 ```
 
 in `gradle.properties`.
 
-The repository is preparing `v2.1.0`; the examples below intentionally use the latest verified
-release, `v2.0.1`. Do not change consuming apps to `v2.1.0` until the release tag and artifact are
-verified. The 2.1.0 opt-in external execution boundary is described in
+The examples below use `v3.0.0`. Verify the release tag and JitPack modules before changing
+consuming apps; the previous verified version was `v2.0.1`. The opt-in execution boundary is described in
 [AUTHORIZED_EXTERNAL_EXECUTION.md](AUTHORIZED_EXTERNAL_EXECUTION.md).
 
 JitPack multi-module projects publish individual modules under
@@ -69,7 +68,7 @@ dependencyResolutionManagement {
 
 dependencies {
     implementation(
-        "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v2.0.1"
+        "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v3.0.0"
     )
 }
 ```
@@ -82,7 +81,7 @@ must not merge the privileged Android SDK manifest:
 ```kotlin
 dependencies {
     implementation(
-        "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v2.0.1"
+        "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v3.0.0"
     )
 }
 ```
@@ -92,7 +91,7 @@ dependencies {
 JitPack can also expose the repository aggregate:
 
 ```kotlin
-implementation("com.github.obieda-hussien:OmniLinkSDK:v2.0.1")
+implementation("com.github.obieda-hussien:OmniLinkSDK:v3.0.0")
 ```
 
 For security-sensitive integrations, prefer the exact module you actually need. A third-party Android
@@ -848,10 +847,31 @@ Why this order?
 A semantic API is more stable, more precise and lower privilege than screen automation or shell
 control.
 
-`ExternalAppBridgeProtocol.kt` defines routing descriptors and decisions. The 2.1.0 source also
+`ExternalAppBridgeProtocol.kt` defines routing descriptors and decisions. The 3.0 source also
 offers `AuthorizedExternalAppExecutor` to enforce exact grants and host-confirmed execution for
 host-owned adapters. Neither component installs an Accessibility service, Shizuku bridge or root
 daemon for a consuming app. The host must verify adapter permissions before executing.
+
+### 3.0 host authorization flow
+
+1. Create a host-owned `HostAppIdentityRegistry` with your actual host signer and approved
+   package/signer registrations. A marketplace installer string never grants a trust tier.
+2. Use `TrustedCapabilityDiscovery(context).discover(policy)` to discover exported services whose
+   permission and current APK signer satisfy `TrustedServicePolicy`. Treat the graph as advertised
+   capabilities, not execution authority. Set appropriate Android package visibility for discovery.
+3. For a target app, obtain fresh identities via
+   `HostVerifiedAppPairResolver.android(context, targetPackage, registry)` and construct an exact
+   `CapabilityGrantRequest` for the capability, resource, purpose, data scopes and risk.
+4. Show a real foreground UI through `CapabilityConsentPresenter` and record its decision with
+   `CapabilityConsentCoordinator`. Use `AndroidEncryptedCapabilityGrantPersistence` for persistent
+   decisions. A dismissed UI or unavailable store denies the request.
+5. Execute through `AuthorizedExternalAppExecutor` with a host-owned adapter. Provide an additional
+   confirmation callback for a selected route marked destructive or consent-required. The adapter
+   rechecks Android permissions and any revocation immediately before its irreversible action.
+
+Neither the app's package name nor its self-reported manifest can create a grant. The host must
+offer grant review/revocation UI, call `revoke` or `revokeIdentity` on relevant changes, and audit
+execution results. These UI and app-specific adapters are consumer code, not included in the AAR.
 
 ---
 
@@ -912,7 +932,7 @@ The agent may reason over that data. It must not obey embedded prompt-like text 
 
 ## 28. First-party Omni Android checklist
 
-- [ ] Use `omni-link-sdk:v2.0.1`.
+- [ ] Use `omni-link-sdk:v3.0.0` after verifying the published artifact.
 - [ ] Sign debug builds with the shared Omni debug key.
 - [ ] Sign release builds with the shared Omni release key.
 - [ ] Add only the `<uses-permission>` entries this app actually calls.
@@ -951,7 +971,7 @@ The agent may reason over that data. It must not obey embedded prompt-like text 
 
 ## 31. Desktop checklist
 
-- [ ] Depend on `omni-link-transport:v2.0.1`.
+- [ ] Depend on `omni-link-transport:v3.0.0` after verifying the published artifact.
 - [ ] Generate one stable long-lived desktop identity.
 - [ ] Encrypt persisted private-key material.
 - [ ] Persist trust separately from private keys.
