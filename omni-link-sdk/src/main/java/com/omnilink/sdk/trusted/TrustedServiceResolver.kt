@@ -140,11 +140,9 @@ class TrustedServiceResolver(context: Context) {
         val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             val info = pm.getPackageInfo(packageName, PackageManager.GET_SIGNING_CERTIFICATES)
             val signing = info.signingInfo ?: return@runCatching emptySet()
-            if (signing.hasMultipleSigners()) {
-                signing.apkContentsSigners
-            } else {
-                signing.signingCertificateHistory
-            }
+            // A certificate in signing history is not the signer of the installed APK. A pinned
+            // provider must be approved again after rotation before privileged Binder binding.
+            signing.apkContentsSigners
         } else {
             @Suppress("DEPRECATION")
             pm.getPackageInfo(packageName, PackageManager.GET_SIGNATURES).signatures
