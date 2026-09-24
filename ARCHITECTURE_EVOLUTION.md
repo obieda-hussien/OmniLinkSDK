@@ -1,11 +1,10 @@
 # OmniLinkSDK Architecture Evolution
 
-This document separates what OmniLink 1.4 actually implements from what remains protocol-only or
-future work.
+This document separates implemented runtime behavior from protocol models and future work.
 
 Do not advertise a feature as available merely because a model class exists.
 
-## Implemented in 1.4
+## Implemented runtime foundations
 
 ### Real desktop/JVM transport
 
@@ -64,11 +63,12 @@ The SDK intentionally does not auto-start a permanent Android service.
 
 ### Packaging
 
-The repository now publishes two logical modules:
+The repository publishes three logical modules:
 
 ```text
 omni-link-sdk
 omni-link-transport
+omni-link-public
 ```
 
 CI verifies:
@@ -113,6 +113,18 @@ CI verifies:
 - external-app bridge descriptors;
 - limited public Omni request contract;
 - task history/replay protocol types.
+
+`ExternalAppRoutePlanner` adds a deterministic planning step for already-discovered external-app
+adapters. It matches the exact package and operation, prefers semantic/low-privilege routes, and
+defaults to excluding Accessibility, Shizuku, shell and root. A host may explicitly allow additional
+adapter kinds for a request. Authorization must come from host policy; descriptor claims from a
+provider are not evidence. Permission denial and unknown authorization stop route selection. Only
+an unavailable authorized route can fall through to another candidate. Consent and destructive
+routes are returned with `requiresConfirmation` set.
+
+This planner does not discover or probe adapters, verify host grants, request user consent, or execute
+operations. Integrators must do those steps at their enforcement boundary. In particular, a selected
+route is not authorization to perform it.
 
 ### Transport-independent session models
 

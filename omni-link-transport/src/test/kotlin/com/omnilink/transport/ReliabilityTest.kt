@@ -7,11 +7,56 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.net.InetAddress
+import java.util.concurrent.atomic.AtomicInteger
 
 class ReliabilityTest {
+
+    @Test
+    fun `start is idempotent and stop then restart uses one supervisor per lifecycle`() = runBlocking {
+        val serverIdentity = JvmEcSigningIdentity.generate("lifecycle-server", PeerRole.SERVICE)
+        val clientIdentity = JvmEcSigningIdentity.generate("lifecycle-client", PeerRole.DESKTOP)
+        val serverTrust = InMemoryPeerTrustStore(listOf(PeerTrustRecord(
+            clientIdentity.peerId, clientIdentity.publicKeySha256(), TransportTrustLevel.PAIRED
+        )))
+        val clientTrust = InMemoryPeerTrustStore(listOf(PeerTrustRecord(
+            serverIdentity.peerId, serverIdentity.publicKeySha256(), TransportTrustLevel.PAIRED
+        )))
+        val sessions = AtomicInteger()
+        val server = OmniTcpServer(serverIdentity, serverTrust,
+            bindAddress = InetAddress.getLoopbackAddress(), port = 0)
+        server.start(onSession = { raw ->
+            sessions.incrementAndGet()
+            OmniMultiplexedConnection(raw, this).awaitClosed()
+        })
+        val client = OmniReliableClient("127.0.0.1", server.localPort,
+            clientIdentity, clientTrust,
+            heartbeatPolicy = HeartbeatPolicy(10_000, 1_000))
+        try {
+            val first = client.start()
+            assertSame(first, client.start())
+            withTimeout(5_000) { client.state.filterIsInstance<ReliableConnectionState.Connected>().first() }
+            withTimeout(5_000) { while (sessions.get() < 1) delay(10) }
+            assertEquals(1, sessions.get())
+            client.stop()?.join()
+            assertEquals(ReliableConnectionState.Stopped, client.state.value)
+
+            val restarted = client.start()
+            assertNotSame(first, restarted)
+            withTimeout(5_000) { client.state.filterIsInstance<ReliableConnectionState.Connected>().first() }
+            withTimeout(5_000) { while (sessions.get() < 2) delay(10) }
+            assertEquals(2, sessions.get())
+            client.stop()?.join()
+        } finally {
+            client.close()
+            server.close()
+        }
+        assertTrue(runCatching { client.start() }.isFailure)
+    }
 
     @Test
     fun `retry policy grows exponentially and respects maximum`() {

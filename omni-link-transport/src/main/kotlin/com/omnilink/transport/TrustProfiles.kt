@@ -35,8 +35,17 @@ object PeerTrustProfiles {
         candidate: PeerCandidate,
         expectedPlatformSignerSha256: Set<String>,
         inboundCapabilities: Set<String>,
-        outboundCapabilities: Set<String>
+        outboundCapabilities: Set<String>,
+        // Source-compatible default fails closed for old callers. Supply a previously pinned
+        // transport identity verified by the host, not a key copied from this candidate.
+        expectedTransportPublicKeySha256: String? = null
     ): PeerTrustRecord {
+        require(!expectedTransportPublicKeySha256.isNullOrBlank()) {
+            "FIRST_PARTY requires a host-owned, previously pinned transport public key"
+        }
+        require(constantTimeEqualsHex(expectedTransportPublicKeySha256, candidate.publicKeySha256)) {
+            "Candidate transport key does not match the host-owned first-party pin"
+        }
         require(expectedPlatformSignerSha256.isNotEmpty()) {
             "FIRST_PARTY requires host-owned expected platform signer fingerprints"
         }
@@ -60,7 +69,7 @@ object PeerTrustProfiles {
             inboundCapabilities = inboundCapabilities,
             outboundCapabilities = outboundCapabilities,
             expectedPlatformSignerSha256 = expected,
-            notes = "Explicitly verified first-party Omni peer"
+            notes = "Host-pinned transport identity; remotely asserted APK signer is metadata, not independent verification"
         )
     }
 
