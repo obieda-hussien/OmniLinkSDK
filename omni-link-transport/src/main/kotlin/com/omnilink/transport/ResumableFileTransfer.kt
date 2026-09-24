@@ -268,10 +268,15 @@ class OmniFileTransferReceiver(
         }
 
         val finalFile = File(rootDir, transferKey(owner, transferId) + "-" + safeFileName(manifest.fileName))
-        if (finalFile.exists()) finalFile.delete()
+        // A repeated transfer ID must never erase a previously committed file. Retain the
+        // verified partial for a later explicit cleanup if the destination is occupied.
+        if (finalFile.exists()) {
+            return TransferCommitReply(false, code = "destination_exists")
+        }
         if (!partial.renameTo(finalFile)) {
-            partial.copyTo(finalFile, overwrite = true)
-            partial.delete()
+            // Both paths live below rootDir. Refuse a non-atomic copy fallback: it could expose
+            // an incomplete destination or destroy a previously committed file on failure.
+            return TransferCommitReply(false, code = "atomic_commit_failed")
         }
         manifests.remove(transferId)
         manifestFile(owner, transferId).delete()

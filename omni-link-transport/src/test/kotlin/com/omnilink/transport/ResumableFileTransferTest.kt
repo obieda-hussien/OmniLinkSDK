@@ -64,12 +64,13 @@ class ResumableFileTransferTest {
 
         server.start(onSession = { raw ->
             val connection = OmniMultiplexedConnection(raw, this)
+            var commits = 0
             while (connection.isOpen) {
                 val request = withTimeout(10_000) { connection.incomingRequests.first() }
                 if (!receiver.tryHandle(connection, request)) {
                     connection.respondUtf8(request, "{\"error\":\"unsupported\"}")
                 }
-                if (request.capability == OmniTransferCapabilities.COMMIT) break
+                if (request.capability == OmniTransferCapabilities.COMMIT && ++commits >= 2) break
             }
         })
 
@@ -149,11 +150,23 @@ class ResumableFileTransferTest {
         val stored = requireNotNull(result.storedPath).let { java.io.File(it) }
         assertArrayEquals(bytes, stored.readBytes())
 
+        // Reusing the same ID with a different file must not replace the original destination.
+        val changed = Files.createTempFile("omnilink-changed", ".bin").toFile().apply {
+            writeBytes(byteArrayOf(1, 2, 3, 4))
+        }
+        val replacement = OmniFileTransferSender(
+            client, TransferPolicy(maxChunkBytes = 128 * 1024)
+        ).sendFile(changed, manifest.copy(totalBytes = changed.length(), sha256 = sha256(changed.readBytes())))
+        assertFalse(replacement.accepted)
+        assertTrue(replacement.code == "destination_exists")
+        assertArrayEquals(bytes, stored.readBytes())
+
         client.close()
         otherClient.close()
         server.close()
         sentinel.delete()
         source.delete()
+        changed.delete()
         receiveDir.deleteRecursively()
         Unit
     }
