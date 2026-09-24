@@ -20,10 +20,10 @@ For API examples and detailed integration patterns, use
 ## First-party Android rollout
 
 1. Configure the shared Omni debug and release signing identities.
-2. Add the 1.4 Android module:
+2. Add the 2.0 Android module:
    ```kotlin
    implementation(
-       "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v2.0.0"
+       "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v2.0.1"
    )
    ```
 3. Decide whether the app is an extension provider, caller, Agent Gateway client, or several of these.
@@ -49,7 +49,7 @@ If structured bidirectional communication is needed, use the pure transport modu
 
 ```kotlin
 implementation(
-    "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v2.0.0"
+    "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v2.0.1"
 )
 ```
 
@@ -57,7 +57,7 @@ Pair the peer, verify the code/fingerprint, then store a TRUSTED_PARTNER record 
 explicit inbound and outbound ACLs.
 
 A partner trust rule in application code does not bypass Android's signature-permission gate.
-Differently-signed partners are therefore not privileged Binder peers by default in 1.4.
+Differently-signed partners are therefore not privileged Binder peers by default in 2.0.
 
 ## Unknown third-party rollout
 
@@ -89,17 +89,15 @@ that ceiling inside the transport policy even if a stored ACL accidentally conta
 
 ## OmniLink release order
 
-For 2.0.0:
+For the 2.0.1 Binder crash fix:
 
-1. OMNILINK_VERSION remains the only source version.
-2. Run the full build and tests.
-3. Run publishToMavenLocal for both modules.
-4. Check every Markdown file for stale version or trust assumptions.
-5. Ensure the trust-mesh foundation is on main before landing the stacked 1.4 transport changes.
-6. Merge 1.4 to main.
-7. Let the release workflow create v2.0.0.
-8. Verify the JitPack module list.
-9. Only then move consumers to v2.0.0.
+1. Confirm the Binder getter and repeated-call regression tests pass in CI.
+2. Merge the focused fix into `main`; the release workflow then builds and publishes `v2.0.1`.
+3. Verify the release tag and JitPack artifacts correspond to the merged commit.
+4. Update Workspace, AndroidIDE, and any CI staging scripts to `v2.0.1` in separate consumer changes.
+5. Rebuild and test the actual installed Android APKs. An APK still using `v2.0.0` remains affected.
+
+The 3.0 architecture and security work belongs in separate pull requests.
 
 ## Canonical documentation
 

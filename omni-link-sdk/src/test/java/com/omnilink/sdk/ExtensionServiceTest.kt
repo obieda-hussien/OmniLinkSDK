@@ -168,6 +168,19 @@ class ExtensionServiceTest {
 
 
     @Test
+    fun `getCapabilityManifest reads the enclosing service without recursive Binder calls`() {
+        val service = Robolectric.buildService(V2Service::class.java).create().bind().get()
+        val binder = service.onBind(Intent()) as IExtensionService
+
+        repeat(3) {
+            val actual = Json.decodeFromString<CapabilityManifest>(binder.getCapabilityManifest())
+            assertEquals(service.capabilityManifest, actual)
+            assertEquals(1, actual.minSupportedVersion)
+            assertEquals(2, actual.maxSupportedVersion)
+        }
+    }
+
+    @Test
     fun `executeAction with unsupported protocol version returns version_mismatch error`() {
         val service = Robolectric.buildService(V1Service::class.java).create().bind().get()
         val binder = service.onBind(Intent()) as IExtensionService

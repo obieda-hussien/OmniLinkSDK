@@ -267,7 +267,12 @@ abstract class ExtensionService : Service() {
 
     private val binder = object : IExtensionService.Stub() {
         override fun getCapabilityManifest(): String =
-            OmniJson.instance.encodeToString(capabilityManifest)
+            // Qualify the OUTER service property explicitly. The AIDL Stub exposes a Java
+            // getCapabilityManifest() method which Kotlin also sees as a synthetic property
+            // on this anonymous Binder object. Unqualified "capabilityManifest" resolves
+            // back to this Binder getter, recurses, and crashes the hosting app with
+            // StackOverflowError during discovery (confirmed by AndroidIDE logcat).
+            OmniJson.instance.encodeToString(this@ExtensionService.capabilityManifest)
 
         override fun executeAction(protocolVersion: Int, requestJson: String): String {
             val outcome = executeSync(protocolVersion, requestJson, resolveCaller())

@@ -12,7 +12,7 @@ or shipping derivative builds of this source is not permitted except for the lim
 rights that apply to public repositories. See [LICENSE](LICENSE), [NOTICE.md](NOTICE.md), and
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Version **2.0.0** splits public and privileged integration by design:
+Version **2.0.1** retains the 2.0 public and privileged integration boundaries and fixes the Binder capability-manifest getter:
 
 - `omni-link-public`: narrow Ask/Share/Open contracts for unknown or third-party Android apps;
 - `omni-link-sdk`: trusted Android Binder/AIDL, provider verification and large-payload adapters;
@@ -25,7 +25,7 @@ receiving host from Android signing identity, pinned transport identity and expl
 The version source of truth is:
 
 ```properties
-OMNILINK_VERSION=2.0.0
+OMNILINK_VERSION=2.0.1
 ```
 
 in `gradle.properties`.
@@ -108,7 +108,7 @@ dependencyResolutionManagement {
 ```kotlin
 dependencies {
     implementation(
-        "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v2.0.0"
+        "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v2.0.1"
     )
 }
 ```
@@ -118,7 +118,7 @@ dependencies {
 ```kotlin
 dependencies {
     implementation(
-        "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v2.0.0"
+        "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v2.0.1"
     )
 }
 ```
@@ -127,7 +127,7 @@ dependencies {
 
 ```kotlin
 dependencies {
-    implementation("com.github.obieda-hussien:OmniLinkSDK:v2.0.0")
+    implementation("com.github.obieda-hussien:OmniLinkSDK:v2.0.1")
 }
 ```
 
@@ -272,7 +272,7 @@ read [DESKTOP_TRANSPORT.md](DESKTOP_TRANSPORT.md).
 Android Binder protocol remains:
 
 ```text
-CURRENT_PROTOCOL_VERSION = 4
+CURRENT_PROTOCOL_VERSION = 5
 ```
 
 Version 2.0 does not reorder existing AIDL methods.

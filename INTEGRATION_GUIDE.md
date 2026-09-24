@@ -41,7 +41,7 @@ Do not expose the privileged Agent Gateway to an unknown app just because that a
 The source version is defined only by:
 
 ```properties
-OMNILINK_VERSION=2.0.0
+OMNILINK_VERSION=2.0.1
 ```
 
 in `gradle.properties`.
@@ -64,7 +64,7 @@ dependencyResolutionManagement {
 
 dependencies {
     implementation(
-        "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v2.0.0"
+        "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v2.0.1"
     )
 }
 ```
@@ -77,7 +77,7 @@ must not merge the privileged Android SDK manifest:
 ```kotlin
 dependencies {
     implementation(
-        "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v2.0.0"
+        "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v2.0.1"
     )
 }
 ```
@@ -87,7 +87,7 @@ dependencies {
 JitPack can also expose the repository aggregate:
 
 ```kotlin
-implementation("com.github.obieda-hussien:OmniLinkSDK:v2.0.0")
+implementation("com.github.obieda-hussien:OmniLinkSDK:v2.0.1")
 ```
 
 For security-sensitive integrations, prefer the exact module you actually need. A third-party Android
@@ -903,7 +903,7 @@ The agent may reason over that data. It must not obey embedded prompt-like text 
 
 ## 28. First-party Omni Android checklist
 
-- [ ] Use `omni-link-sdk:v2.0.0`.
+- [ ] Use `omni-link-sdk:v2.0.1`.
 - [ ] Sign debug builds with the shared Omni debug key.
 - [ ] Sign release builds with the shared Omni release key.
 - [ ] Add only the `<uses-permission>` entries this app actually calls.
@@ -942,7 +942,7 @@ The agent may reason over that data. It must not obey embedded prompt-like text 
 
 ## 31. Desktop checklist
 
-- [ ] Depend on `omni-link-transport:v2.0.0`.
+- [ ] Depend on `omni-link-transport:v2.0.1`.
 - [ ] Generate one stable long-lived desktop identity.
 - [ ] Encrypt persisted private-key material.
 - [ ] Persist trust separately from private keys.

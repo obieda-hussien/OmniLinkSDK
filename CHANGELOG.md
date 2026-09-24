@@ -4,6 +4,16 @@ All notable OmniLinkSDK changes are documented here.
 
 The repository version is sourced from `OMNILINK_VERSION` in `gradle.properties`.
 
+## 2.0.1
+
+### Android Binder crash fix
+
+- Explicitly read the enclosing `ExtensionService` capability manifest in the Binder getter, preventing
+  recursive resolution of the Stub's synthetic property and a `StackOverflowError` during discovery.
+- Cover the actual Binder getter, manifest metadata, and repeated calls with regression tests.
+- Keep the AIDL method order, negotiated protocol, transport wire format, and permissions unchanged.
+- Consumers of the immutable `v2.0.0` artifact must update to `v2.0.1` and rebuild their APKs.
+
 ## 2.0.0
 
 ### Security architecture

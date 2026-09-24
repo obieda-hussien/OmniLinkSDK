@@ -344,7 +344,7 @@ For consumers that want only the JVM transport:
 
 ```kotlin
 implementation(
-    "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v2.0.0"
+    "com.github.obieda-hussien.OmniLinkSDK:omni-link-transport:v2.0.1"
 )
 ```
 
@@ -352,14 +352,14 @@ For first-party Android consumers:
 
 ```kotlin
 implementation(
-    "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v2.0.0"
+    "com.github.obieda-hussien.OmniLinkSDK:omni-link-sdk:v2.0.1"
 )
 ```
 
 The repository aggregate remains:
 
 ```kotlin
-implementation("com.github.obieda-hussien:OmniLinkSDK:v2.0.0")
+implementation("com.github.obieda-hussien:OmniLinkSDK:v2.0.1")
 ```
 
 Prefer the exact module when you do not need the full repository surface.
