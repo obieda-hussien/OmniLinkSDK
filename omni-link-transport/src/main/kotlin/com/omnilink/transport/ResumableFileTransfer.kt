@@ -40,7 +40,8 @@ class OmniFileTransferSender(
             )
         }
 
-        val startOffset = open.nextOffset.coerceIn(0, manifest.totalBytes)
+        require(open.nextOffset in 0..manifest.totalBytes) { "Invalid resume offset" }
+        val startOffset = open.nextOffset
         RandomAccessFile(source, "r").use { input ->
             input.seek(startOffset)
             var offset = startOffset
@@ -76,6 +77,7 @@ class OmniFileTransferSender(
                         message = ack.message
                     )
                 }
+                require(ack.nextOffset == offset + read) { "Invalid transfer acknowledgment offset" }
                 offset = ack.nextOffset
                 input.seek(offset)
                 onProgress(TransferProgress(manifest.transferId, offset, manifest.totalBytes))
@@ -111,7 +113,8 @@ class OmniFileTransferReceiver(
     private val policy: TransferPolicy = TransferPolicy()
 ) {
     private val lock = Any()
-    private val manifests = mutableMapOf<String, TransferManifest>()
+    private data class ActiveTransfer(val owner: String, val manifest: TransferManifest)
+    private val manifests = mutableMapOf<String, ActiveTransfer>()
 
     init {
         rootDir.mkdirs()
@@ -123,7 +126,7 @@ class OmniFileTransferReceiver(
     ): Boolean = withContext(Dispatchers.IO) {
         when (request.capability) {
             OmniTransferCapabilities.OPEN -> {
-                val reply = handleOpen(request.payload)
+                val reply = handleOpen(connection.remotePeerId, request.payload)
                 connection.respond(
                     request,
                     TransportJson.instance.encodeToString(
@@ -134,7 +137,7 @@ class OmniFileTransferReceiver(
                 true
             }
             OmniTransferCapabilities.CHUNK -> {
-                val reply = handleChunk(request)
+                val reply = handleChunk(connection.remotePeerId, request)
                 connection.respond(
                     request,
                     TransportJson.instance.encodeToString(
@@ -146,7 +149,7 @@ class OmniFileTransferReceiver(
             }
             OmniTransferCapabilities.COMMIT -> {
                 val id = request.payload.toString(Charsets.UTF_8)
-                val reply = handleCommit(id)
+                val reply = handleCommit(connection.remotePeerId, id)
                 connection.respond(
                     request,
                     TransportJson.instance.encodeToString(
@@ -158,15 +161,15 @@ class OmniFileTransferReceiver(
             }
             OmniTransferCapabilities.CANCEL -> {
                 val id = request.payload.toString(Charsets.UTF_8)
-                cancel(id)
-                connection.respondUtf8(request, "{\"accepted\":true}")
+                val cancelled = cancel(connection.remotePeerId, id)
+                connection.respondUtf8(request, "{\"accepted\":$cancelled}")
                 true
             }
             else -> false
         }
     }
 
-    private fun handleOpen(payload: ByteArray): TransferOpenReply = synchronized(lock) {
+    private fun handleOpen(owner: String, payload: ByteArray): TransferOpenReply = synchronized(lock) {
         val manifest = runCatching {
             TransportJson.instance.decodeFromString(
                 TransferManifest.serializer(),
@@ -176,7 +179,7 @@ class OmniFileTransferReceiver(
             return TransferOpenReply(false, code = "invalid_manifest", message = it.message)
         }
 
-        if (!SAFE_ID.matches(manifest.transferId)) {
+        if (!validId(manifest.transferId)) {
             return TransferOpenReply(false, code = "invalid_transfer_id")
         }
         if (manifest.totalBytes !in 0..policy.maxFileBytes) {
@@ -189,8 +192,24 @@ class OmniFileTransferReceiver(
             return TransferOpenReply(false, code = "invalid_sha256")
         }
 
-        manifests[manifest.transferId] = manifest
-        val partial = partialFile(manifest.transferId)
+        val active = manifests[manifest.transferId]
+        if (active != null && active.owner != owner) {
+            return TransferOpenReply(false, code = "transfer_owned_by_other_peer")
+        }
+        if (active != null && active.manifest != manifest) {
+            return TransferOpenReply(false, code = "manifest_conflict")
+        }
+        val partial = partialFile(owner, manifest.transferId)
+        val recorded = manifestFile(owner, manifest.transferId)
+        val encoded = TransportJson.instance.encodeToString(TransferManifest.serializer(), manifest)
+        if (recorded.exists() && recorded.readText() != encoded) {
+            return TransferOpenReply(false, code = "manifest_conflict")
+        }
+        if (partial.exists() && !recorded.exists()) {
+            return TransferOpenReply(false, code = "unrecognized_partial")
+        }
+        if (!recorded.exists()) recorded.writeText(encoded)
+        manifests[manifest.transferId] = ActiveTransfer(owner, manifest)
         val current = partial.takeIf(File::exists)?.length()?.coerceAtMost(manifest.totalBytes) ?: 0L
         if (partial.exists() && partial.length() > manifest.totalBytes) {
             partial.delete()
@@ -199,10 +218,13 @@ class OmniFileTransferReceiver(
         TransferOpenReply(true, nextOffset = current)
     }
 
-    private fun handleChunk(request: TransportMessage): TransferChunkReply = synchronized(lock) {
+    private fun handleChunk(owner: String, request: TransportMessage): TransferChunkReply = synchronized(lock) {
         val id = request.metadata["transferId"].orEmpty()
-        val manifest = manifests[id]
+        if (!validId(id)) return TransferChunkReply(false, 0, "invalid_transfer_id")
+        val active = manifests[id]
             ?: return TransferChunkReply(false, 0, "unknown_transfer")
+        if (active.owner != owner) return TransferChunkReply(false, 0, "transfer_owned_by_other_peer")
+        val manifest = active.manifest
         val offset = request.metadata["offset"]?.toLongOrNull()
             ?: return TransferChunkReply(false, 0, "invalid_offset")
         if (request.payload.size > policy.maxChunkBytes) {
@@ -213,7 +235,7 @@ class OmniFileTransferReceiver(
             return TransferChunkReply(false, offset, "chunk_hash_mismatch")
         }
 
-        val partial = partialFile(id)
+        val partial = partialFile(owner, id)
         partial.parentFile?.mkdirs()
         val current = partial.takeIf(File::exists)?.length() ?: 0L
         if (offset != current) {
@@ -231,10 +253,13 @@ class OmniFileTransferReceiver(
         TransferChunkReply(true, partial.length())
     }
 
-    private fun handleCommit(transferId: String): TransferCommitReply = synchronized(lock) {
-        val manifest = manifests[transferId]
+    private fun handleCommit(owner: String, transferId: String): TransferCommitReply = synchronized(lock) {
+        if (!validId(transferId)) return TransferCommitReply(false, code = "invalid_transfer_id")
+        val active = manifests[transferId]
             ?: return TransferCommitReply(false, code = "unknown_transfer")
-        val partial = partialFile(transferId)
+        if (active.owner != owner) return TransferCommitReply(false, code = "transfer_owned_by_other_peer")
+        val manifest = active.manifest
+        val partial = partialFile(owner, transferId)
         if (!partial.isFile || partial.length() != manifest.totalBytes) {
             return TransferCommitReply(false, code = "incomplete_transfer")
         }
@@ -242,22 +267,41 @@ class OmniFileTransferReceiver(
             return TransferCommitReply(false, code = "file_hash_mismatch")
         }
 
-        val finalFile = File(rootDir, transferId + "-" + safeFileName(manifest.fileName))
-        if (finalFile.exists()) finalFile.delete()
+        val finalFile = File(rootDir, transferKey(owner, transferId) + "-" + safeFileName(manifest.fileName))
+        // A repeated transfer ID must never erase a previously committed file. Retain the
+        // verified partial for a later explicit cleanup if the destination is occupied.
+        if (finalFile.exists()) {
+            return TransferCommitReply(false, code = "destination_exists")
+        }
         if (!partial.renameTo(finalFile)) {
-            partial.copyTo(finalFile, overwrite = true)
-            partial.delete()
+            // Both paths live below rootDir. Refuse a non-atomic copy fallback: it could expose
+            // an incomplete destination or destroy a previously committed file on failure.
+            return TransferCommitReply(false, code = "atomic_commit_failed")
         }
         manifests.remove(transferId)
+        manifestFile(owner, transferId).delete()
         TransferCommitReply(true, storedPath = finalFile.absolutePath)
     }
 
-    private fun cancel(transferId: String) = synchronized(lock) {
+    private fun cancel(owner: String, transferId: String): Boolean = synchronized(lock) {
+        if (!validId(transferId)) return false
+        val active = manifests[transferId]
+        if (active != null && active.owner != owner) return false
+        val recorded = manifestFile(owner, transferId)
+        if (active == null && !recorded.exists()) return false
         manifests.remove(transferId)
-        partialFile(transferId).delete()
+        val deleted = partialFile(owner, transferId).let { !it.exists() || it.delete() }
+        if (deleted) recorded.delete()
+        deleted
     }
 
-    private fun partialFile(id: String): File = File(rootDir, "$id.part")
+    // Hash both components so even a malformed remotely supplied name cannot escape rootDir.
+    private fun partialFile(owner: String, id: String): File = File(rootDir, transferKey(owner, id) + ".part")
+    private fun manifestFile(owner: String, id: String): File = File(rootDir, transferKey(owner, id) + ".manifest")
+    private fun transferKey(owner: String, id: String): String =
+        sha256((owner + "\u0000" + id).toByteArray(Charsets.UTF_8))
+
+    private fun validId(id: String): Boolean = SAFE_ID.matches(id) && ".." !in id
 
     private fun safeFileName(name: String): String =
         name.substringAfterLast('/').substringAfterLast('\\')

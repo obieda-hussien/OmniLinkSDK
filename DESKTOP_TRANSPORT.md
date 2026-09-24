@@ -102,6 +102,11 @@ expectedPlatformSignerSha256
 expiresAtEpochMs
 ```
 
+For Android FIRST_PARTY enrollment over TCP, pass the host-owned pinned transport key to
+`PeerTrustProfiles.firstParty(..., expectedTransportPublicKeySha256 = pin)`.
+The remotely asserted APK signer is metadata and cannot independently establish official Omni
+membership; verify the installed package and certificate through a local trusted Android boundary.
+
 Trust levels are:
 
 ```text

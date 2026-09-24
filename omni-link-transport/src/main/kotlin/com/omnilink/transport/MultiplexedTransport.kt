@@ -33,6 +33,10 @@ class OmniMultiplexedConnection(
     eventBufferCapacity: Int = 128
 ) : Closeable {
 
+    init {
+        require(requestQueueCapacity in 1..1024) { "Request queue capacity must be bounded" }
+    }
+
     private val ownsScope = parentScope == null
     private val scope = parentScope ?: CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val pending = ConcurrentHashMap<String, CompletableDeferred<TransportMessage>>()
@@ -80,7 +84,15 @@ class OmniMultiplexedConnection(
                         }
                     }
 
-                    TransportMessageType.REQUEST -> requests.send(message)
+                    TransportMessageType.REQUEST -> {
+                        // The sole socket reader must never suspend behind a slow application
+                        // consumer: doing so also stalls responses, pings and authorization.
+                        if (!requests.trySend(message).isSuccess) {
+                            throw TransportOverloadedException(
+                                "Incoming request queue full for peer '${session.remotePeerId}'"
+                            )
+                        }
+                    }
                     TransportMessageType.EVENT,
                     TransportMessageType.STREAM_CHUNK -> _events.emit(message)
                     TransportMessageType.CONTROL -> handleControl(message)

@@ -1,9 +1,11 @@
 package com.omnilink.transport
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
@@ -95,6 +97,9 @@ class OmniReliableClient(
 ) : AutoCloseable {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val lifecycleLock = Any()
+    private var supervisor: Job? = null
+    private var closed = false
     private val _state = MutableStateFlow<ReliableConnectionState>(
         ReliableConnectionState.Stopped
     )
@@ -107,7 +112,32 @@ class OmniReliableClient(
     fun connectionOrNull(): OmniMultiplexedConnection? =
         activeConnection?.takeIf { it.isOpen }
 
-    fun start(): Job = scope.launch {
+    /** Repeated calls share one supervisor; after [stop] completes this client can restart. */
+    fun start(): Job = synchronized(lifecycleLock) {
+        check(!closed) { "Client has been closed" }
+        supervisor?.let { existing ->
+            if (!existing.isCompleted) {
+                check(!existing.isCancelled) { "Wait for stop() to complete before restarting" }
+                return existing
+            }
+        }
+        val job = scope.launch(start = CoroutineStart.LAZY) { supervise() }
+        supervisor = job
+        job.invokeOnCompletion {
+            synchronized(lifecycleLock) {
+                if (supervisor === job) {
+                    activeConnection?.close()
+                    activeConnection = null
+                    supervisor = null
+                    _state.value = ReliableConnectionState.Stopped
+                }
+            }
+        }
+        job.start()
+        job
+    }
+
+    private suspend fun supervise() {
         var attempt = 0
         var consecutiveFailures = 0
 
@@ -116,7 +146,9 @@ class OmniReliableClient(
             _state.value = ReliableConnectionState.Connecting(attempt)
 
             try {
-                val raw = withContext(Dispatchers.IO) {
+                // Socket.connect is blocking. Finish it before observing cancellation so a
+                // successfully connected socket cannot be abandoned by a cancelled dispatcher.
+                val raw = withContext(Dispatchers.IO + NonCancellable) {
                     OmniTcpClient.connect(
                         host = host,
                         port = port,
@@ -125,6 +157,10 @@ class OmniReliableClient(
                         admissionHandler = admissionHandler,
                         config = transportConfig
                     )
+                }
+                if (!currentCoroutineContext().isActive) {
+                    raw.close()
+                    throw CancellationException("Client stopped while connecting")
                 }
                 val connection = OmniMultiplexedConnection(raw, scope)
                 activeConnection = connection
@@ -180,10 +216,21 @@ class OmniReliableClient(
         }
     }
 
-    override fun close() {
+    /** Cancel the supervisor and return its job so callers can join before [start] again. */
+    fun stop(): Job? = synchronized(lifecycleLock) {
+        supervisor?.also { it.cancel() }
         activeConnection?.close()
         activeConnection = null
         _state.value = ReliableConnectionState.Stopped
-        scope.cancel()
+        supervisor
+    }
+
+    override fun close() {
+        synchronized(lifecycleLock) {
+            if (closed) return
+            closed = true
+            stop()
+            scope.cancel()
+        }
     }
 }

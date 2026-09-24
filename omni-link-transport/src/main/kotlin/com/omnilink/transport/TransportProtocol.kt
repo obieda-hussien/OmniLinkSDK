@@ -146,3 +146,6 @@ class TransportAuthorizationException(message: String) :
 
 class TransportFrameTooLargeException(message: String) :
     OmniTransportException(message)
+
+class TransportOverloadedException(message: String) :
+    OmniTransportException(message)
