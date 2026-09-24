@@ -29,9 +29,11 @@ Omni controlling an application does not give that application equivalent power 
 
 Inbound and outbound ACLs are independent. FIRST_PARTY has no wildcard defaults in v2.
 
-Android FIRST_PARTY promotion requires host-owned signer fingerprints. Desktop FIRST_PARTY promotion
-requires a host-pinned long-lived transport public key. A peer cannot become trusted by repeating its
-own claimed identity.
+Android FIRST_PARTY promotion over TCP requires a previously host-pinned long-lived transport public
+key as well as an expected signer value. The signer transmitted in a remote handshake is a signed
+self-assertion, not proof of the APK certificate. Local Android package/certificate verification must
+happen independently before the host treats that signer as verified. Desktop FIRST_PARTY promotion
+also requires a host-pinned long-lived transport public key.
 
 Unknown or merely paired peers retain the chat/search/summarize/translate/extract ceiling.
 

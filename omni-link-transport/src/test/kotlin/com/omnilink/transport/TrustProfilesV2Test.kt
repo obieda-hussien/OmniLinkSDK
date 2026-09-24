@@ -19,7 +19,8 @@ class TrustProfilesV2Test {
             candidate = candidate,
             expectedPlatformSignerSha256 = setOf("1122"),
             inboundCapabilities = setOf("workspace.memory.*"),
-            outboundCapabilities = setOf("ide.*")
+            outboundCapabilities = setOf("ide.*"),
+            expectedTransportPublicKeySha256 = "aa"
         )
 
         assertEquals(TransportTrustLevel.FIRST_PARTY, record.trustLevel)
@@ -41,7 +42,28 @@ class TrustProfilesV2Test {
                 candidate = candidate,
                 expectedPlatformSignerSha256 = setOf("cafebabe"),
                 inboundCapabilities = setOf("workspace.memory.read"),
-                outboundCapabilities = setOf("ide.health")
+                outboundCapabilities = setOf("ide.health"),
+                expectedTransportPublicKeySha256 = "aa"
+            )
+        }
+    }
+
+    @Test
+    fun `claiming an approved APK signer cannot promote an unpinned transport identity`() {
+        val candidate = PeerCandidate(
+            peerId = "spoofed-android", role = PeerRole.ANDROID,
+            publicKeySha256 = "deadbeef", platformSignerSha256 = setOf("1122"),
+            pairingCode = "123456"
+        )
+        assertThrows(IllegalArgumentException::class.java) {
+            PeerTrustProfiles.firstParty(
+                candidate, setOf("1122"), setOf("workspace.*"), setOf("ide.*")
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            PeerTrustProfiles.firstParty(
+                candidate, setOf("1122"), setOf("workspace.*"), setOf("ide.*"),
+                expectedTransportPublicKeySha256 = "cafebabe"
             )
         }
     }
