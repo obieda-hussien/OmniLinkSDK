@@ -36,6 +36,9 @@ The canonical integration guide is:
 
 **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)**
 
+For host-controlled Android package classification and installer-provenance limits, see
+**[IDENTITY_POLICY.md](IDENTITY_POLICY.md)**.
+
 It explains which API to use for:
 
 - a first-party Omni Android app;
