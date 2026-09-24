@@ -82,6 +82,7 @@ class HostAppIdentityRegistry(
     private val hostSigners = hostSignerSha256.mapNotNull(::normalizeFingerprint).toSet()
     private val registrationByPackage = registrations.associateBy { it.packageName }
     private val userApprovalByPackage = userApprovedApps.associateBy { it.packageName }
+    private val recognizedPackages = recognizedPackages.toSet()
     private val normalizedBlockedSigners = blockedSignerSha256.mapNotNull(::normalizeFingerprint).toSet()
 
     init {
