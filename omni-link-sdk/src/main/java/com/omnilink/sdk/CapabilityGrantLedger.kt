@@ -171,11 +171,11 @@ class InMemoryCapabilityGrantPersistence : CapabilityGrantPersistence {
     override val supportsPersistentGrants: Boolean = false
 
     @Synchronized
-    override fun load(): CapabilityGrantSnapshot = snapshot.deepCopy()
+    override fun load(): CapabilityGrantSnapshot = snapshot.detachedCopy()
 
     @Synchronized
     override fun save(snapshot: CapabilityGrantSnapshot): Boolean {
-        this.snapshot = snapshot.deepCopy()
+        this.snapshot = snapshot.detachedCopy()
         return true
     }
 }
@@ -614,15 +614,7 @@ class CapabilityGrantLedger(
         }
     )
 
-    private fun CapabilityGrantSnapshot.deepCopy() = copy(
-        grants = grants.map {
-            it.copy(
-                resourceScope = it.resourceScope.copy(resourceIds = it.resourceScope.resourceIds.toSet()),
-                dataScopes = it.dataScopes.toSet()
-            )
-        },
-        blockedPairs = blockedPairs.toList()
-    )
+    private fun CapabilityGrantSnapshot.deepCopy() = detachedCopy()
 
     private fun CapabilityGrantRecord.sameTarget(request: CapabilityGrantRequest): Boolean =
         requester.matches(request.requester) && provider.matches(request.provider) &&
@@ -659,3 +651,20 @@ private fun normalizeFingerprint(value: String): String? {
     val normalized = value.replace(":", "").replace(" ", "").lowercase()
     return normalized.takeIf { it.length == 64 && it.all { char -> char in '0'..'9' || char in 'a'..'f' } }
 }
+
+private fun CapabilityGrantSnapshot.detachedCopy(): CapabilityGrantSnapshot = copy(
+    grants = grants.map {
+        it.copy(
+            requester = it.requester.copy(signerSha256 = it.requester.signerSha256.toSet()),
+            provider = it.provider.copy(signerSha256 = it.provider.signerSha256.toSet()),
+            resourceScope = it.resourceScope.copy(resourceIds = it.resourceScope.resourceIds.toSet()),
+            dataScopes = it.dataScopes.toSet()
+        )
+    },
+    blockedPairs = blockedPairs.map {
+        BlockedAppPair(
+            it.requester.copy(signerSha256 = it.requester.signerSha256.toSet()),
+            it.provider.copy(signerSha256 = it.provider.signerSha256.toSet())
+        )
+    }
+)
