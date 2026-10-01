@@ -9,6 +9,17 @@ only because it is the most powerful one.
 > Identity proves who a peer is. Trust sets its maximum authority. Capabilities define what it may do.
 > User consent still gates sensitive side effects.
 
+## Coordinated Launcher integration
+
+The proposed Omni Launcher / Workspace integration uses the existing **3.0.0** APIs.
+See [the Launcher contract](docs/LAUNCHER_CONTRACT.md) for capability payloads, flavor
+limits, signing requirements, local consent and the rollout checklist.
+
+Launcher control uses the protected Binder `ExtensionService` path. Search uses
+`PublicOmniRequest` to open a user-reviewed draft in Workspace; typing and selecting
+the suggestion do not automatically submit the question or authorize launcher changes.
+This contract does not introduce an SDK runtime release or change dependency licenses.
+
 ## 1. Start here: choose the integration type
 
 | Your app/device | Recommended surface | Default trust | What it is for |

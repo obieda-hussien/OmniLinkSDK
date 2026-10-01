@@ -15,3 +15,15 @@ The names **Omni**, **OmniLink**, and **OmniLinkSDK**, and associated project br
 to the project owner. No branding or endorsement rights are granted by source access.
 
 Third-party dependencies remain subject to their own licenses.
+
+## Maintainer and upstream attribution
+
+Project development, updates and Omni ecosystem integration are maintained by
+**Abdelrahman Hussein (عبدالرحمن حسين / Obieda)**,
+[obieda-hussien](https://github.com/obieda-hussien). This credit covers original OmniLinkSDK work
+and maintenance; it does not replace copyright or licensing of third-party material.
+
+Existing source headers, license texts, author notices and dependency attribution must be retained.
+The Launcher integration documentation refers to a Lawnchair/AOSP-derived application; those
+upstream authors retain their rights in the Launcher repository. SDK integration neither transfers
+those rights nor changes the SDK's Omni Reference Source License 1.0.

@@ -4,6 +4,13 @@ All notable OmniLinkSDK changes are documented here.
 
 The repository version is sourced from `OMNILINK_VERSION` in `gradle.properties`.
 
+## Unreleased — consumer integration documentation
+
+- Document the coordinated Omni Launcher/Workspace application contract using existing v3.0.0 APIs:
+  public question drafts and six opted-in, protected launcher capabilities.
+- Add integration-guide/index/rollout references and explicit original-author/maintainer attribution.
+- No SDK runtime, AIDL ordering, protocol/version, license or publication change.
+
 ## 3.0.0 (release candidate; verify tag and published artifacts after merge)
 
 ### Security and capability foundations

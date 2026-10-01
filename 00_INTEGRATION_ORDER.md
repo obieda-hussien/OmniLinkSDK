@@ -105,3 +105,11 @@ that ceiling inside the transport policy even if a stored ACL accidentally conta
 - [DESKTOP_TRANSPORT.md](DESKTOP_TRANSPORT.md)
 - [ARCHITECTURE_EVOLUTION.md](ARCHITECTURE_EVOLUTION.md)
 - [CHANGELOG.md](CHANGELOG.md)
+
+## Launcher application rollout
+
+Follow [docs/LAUNCHER_CONTRACT.md](docs/LAUNCHER_CONTRACT.md). Merge the coordinated Workspace
+and Launcher branches, build both APKs, test public draft handoff, then test opted-in same-signer
+capability control with receiver/caller flavor ceilings. The SDK documentation change introduces
+no runtime code or new artifact version. Preserve the Launcher fork's Lawnchair/AOSP copyrights
+and license headers alongside separate Omni maintainer credits.

@@ -4,6 +4,10 @@
 
 OmniLinkSDK is the protocol, trust, IPC and encrypted device-link layer for the Omni ecosystem.
 
+**Developer and maintainer:** [Abdelrahman Hussein (عبدالرحمن حسين / Obieda)](https://github.com/obieda-hussien).
+Development, updates and ecosystem integration remain attributed to the Omni maintainer;
+third-party components retain their original authors, notices and licenses.
+
 **Copyright © 2026 Abdelrahman Hussein (عبدالرحمن حسين). All rights reserved.**
 
 This repository is **source-available, not open source**. You may study the architecture and independently
@@ -320,6 +324,7 @@ for the Android and JVM modules.
 ## Documentation index
 
 - [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) — which integration to use, when and why.
+- [docs/LAUNCHER_CONTRACT.md](docs/LAUNCHER_CONTRACT.md) — Launcher search draft and protected capability contract.
 - [LINK_PROTOCOL.md](LINK_PROTOCOL.md) — canonical Binder/action/capability protocol rules.
 - [SIGNING_TRUST.md](SIGNING_TRUST.md) — first-party signing and trust.
 - [OMNILINK_TRUST_MESH.md](OMNILINK_TRUST_MESH.md) — trust/capability architecture.
@@ -332,3 +337,12 @@ for the Android and JVM modules.
 - [REPOSITORY_HARDENING.md](REPOSITORY_HARDENING.md) — GitHub rulesets, Actions, secrets and access policy.
 - [LICENSE](LICENSE) — proprietary source-available terms.
 - [NOTICE.md](NOTICE.md) — copyright and ownership notice.
+
+## Omni Launcher application contract
+
+The coordinated Launcher/Workspace proposal uses the existing v3.0.0 public search gateway and
+protected extension capabilities. Public questions become reviewable drafts; control requires
+same signing identity, local consent and both applications' package/flavor ceilings. See
+[Launcher contract](docs/LAUNCHER_CONTRACT.md) for all six capabilities and verification. The proposal
+needs consumer branch merges and updated APKs; it introduces no SDK code, ABI or version change.
+Lawnchair/AOSP attribution remains in the Launcher repository; the SDK's license is unchanged.
